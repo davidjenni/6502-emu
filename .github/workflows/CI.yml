@@ -1,0 +1,46 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  check-build:
+    runs-on: ubuntu-latest
+    # Make sure CI fails on all warnings, including Clippy lints
+    env:
+      RUSTFLAGS: "-Dwarnings"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: rustfmt, clippy
+
+      - name: Show rust toolchain info
+        shell: bash
+        run: |
+          rustup -V
+          rustup toolchain list
+          rustup default
+          cargo -V
+          rustc -V
+
+      - name: Build
+        run: cargo build --workspace
+
+      - name: Test
+        run: cargo test --all-targets --all-features
+
+      - name: Check
+        run: |
+          cargo clippy
+          cargo fmt --all -- --check
