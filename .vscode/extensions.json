@@ -1,8 +1,10 @@
 {
   "recommendations": [
-    "editorconfig.editorconfig",
     "davidanson.vscode-markdownlint",
+    "editorconfig.editorconfig",
     "me-dutour-mathieu.vscode-github-actions",
-    "rust-lang.rust-analyzer"
+    "rust-lang.rust-analyzer",
+    "tamasfe.even-better-toml",
+    "vadimcn.vscode-lldb"
   ]
 }

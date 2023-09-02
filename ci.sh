@@ -3,7 +3,7 @@
 export RUSTFLAGS="-Dwarnings"
 
 echo "== Build:"
-cargo build
+cargo clean
 echo "== Test:"
 cargo test --all-targets --all-features
 echo "== Lint:"
