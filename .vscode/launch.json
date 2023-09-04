@@ -37,9 +37,9 @@
       "request": "launch",
       "name": "Debug unit tests in library 'emulator'",
       "cargo": {
-        "args": ["test", "--no-run", "--lib", "--package=emulator"],
+        "args": ["test", "--no-run", "--lib", "--package=mos6502-emulator"],
         "filter": {
-          "name": "emulator",
+          "name": "mos6502-emulator",
           "kind": "lib"
         }
       },
