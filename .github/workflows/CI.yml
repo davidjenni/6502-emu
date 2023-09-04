@@ -11,25 +11,22 @@ on:
 jobs:
   check-build:
     runs-on: ubuntu-latest
-    # Make sure CI fails on all warnings, including Clippy lints
     env:
+      # Make sure CI fails on all warnings, including Clippy lints
       RUSTFLAGS: "-Dwarnings"
 
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          override: true
-          profile: minimal
-          components: rustfmt, clippy
+          components: clippy, rustfmt
 
       - name: Show rust toolchain info
         shell: bash
         run: |
           rustup -V
-          rustup toolchain list
           rustup default
           cargo -V
           rustc -V
@@ -42,5 +39,5 @@ jobs:
 
       - name: Check
         run: |
-          cargo clippy
+          cargo clippy --all-targets --all-features
           cargo fmt --all -- --check

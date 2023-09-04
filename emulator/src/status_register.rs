@@ -52,11 +52,11 @@ mod tests {
     #[test]
     fn can_set_and_clear_carry() {
         let mut sr = StatusRegister::new();
-        assert_eq!(sr.carry(), false);
+        assert!(!sr.carry());
         sr.set_carry(true);
-        assert_eq!(sr.carry(), true);
+        assert!(sr.carry());
         sr.set_carry(false);
-        assert_eq!(sr.carry(), false);
+        assert!(!sr.carry());
         sr.set_carry(true);
     }
 
@@ -81,20 +81,20 @@ mod tests {
 
         // test with 3 different values: zero, negative, positive
         sr.update_from(0);
-        assert_eq!(sr.negative(), false);
-        assert_eq!(sr.zero(), true);
+        assert!(!sr.negative());
+        assert!(sr.zero());
         let b = format!("{}", sr);
         assert_eq!(b, "0x02:  N=0, V=0, B=0, D=0, I=0, Z=1, C=0");
 
         sr.update_from(-42i8 as u8);
-        assert_eq!(sr.negative(), true);
-        assert_eq!(sr.zero(), false);
+        assert!(sr.negative());
+        assert!(!sr.zero());
         let b = format!("{}", sr);
         assert_eq!(b, "0x80:  N=1, V=0, B=0, D=0, I=0, Z=0, C=0");
 
         sr.update_from(42);
-        assert_eq!(sr.negative(), false);
-        assert_eq!(sr.zero(), false);
+        assert!(!sr.negative());
+        assert!(!sr.zero());
         let b = format!("{}", sr);
         assert_eq!(b, "0x00:  N=0, V=0, B=0, D=0, I=0, Z=0, C=0");
     }

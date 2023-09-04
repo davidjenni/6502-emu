@@ -4,6 +4,7 @@ export RUSTFLAGS="-Dwarnings"
 
 echo "== Build:"
 cargo clean
+cargo build
 echo "== Test:"
 cargo test --all-targets --all-features
 echo "== Lint:"
