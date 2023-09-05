@@ -9,7 +9,10 @@ While the original first MS product targeted the Altair 8080,
 it was the abundance of 6502-based computers (Apple I & II, PET, CBM, etc.)
 that made MSBASIC truly popular and considerably helped the MSFT brand in its early days.
 
-Running MSBASIC on a rust-based CPU emulator on a VM in our Azure cloud is a geeky, but also educational showcase how the whole computer industry has evolved over the past 50 years.
+Running MSBASIC on a rust-based CPU emulator on a VM in the Azure cloud is a geeky,
+but also educational showcase how the whole computer industry has evolved over the past 50 years.
+
+It is also my first foray into programming with rust; this repo is my journey to get close to idiomatic rust programming.
 
 ![MOS6502 in a 40 pin plastic package](/assets/MOS%206502%20DIP40.jpg)
 
