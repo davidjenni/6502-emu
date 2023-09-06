@@ -1,4 +1,4 @@
-use crate::memory::Memory;
+use crate::memory::{AddressError, Memory};
 
 pub struct AddressBus {
     memory: Box<dyn Memory>,
@@ -10,10 +10,18 @@ impl AddressBus {
         AddressBus { memory, pc: 0 }
     }
 
-    pub fn fetch_next_op(&mut self) -> u8 {
-        let op = self.memory.read(self.pc);
+    pub fn fetch_next_op(&mut self) -> Result<u8, AddressError> {
+        let op = self.memory.read(self.pc)?;
         self.pc += 1;
-        op
+        Ok(op)
+    }
+
+    pub fn set_pc(&mut self, address: u16) -> Result<(), AddressError> {
+        if (address as usize) >= self.memory.get_size() {
+            return Err(AddressError::InvalidAddress);
+        }
+        self.pc = address;
+        Ok(())
     }
 
     pub fn get_pc(&self) -> u16 {
@@ -32,6 +40,7 @@ impl std::fmt::Debug for AddressBus {
     }
 }
 
+#[derive(Debug)]
 pub enum AddressingMode {
     Implied,         // CLC
     Accumulator,     // ASL A
@@ -53,44 +62,40 @@ impl AddressingMode {}
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    struct MockMemory {
-        memory: [u8; 256],
-    }
-    impl MockMemory {
-        fn new() -> MockMemory {
-            MockMemory { memory: [0; 256] }
-        }
-    }
-
-    impl Memory for MockMemory {
-        fn read(&self, address: u16) -> u8 {
-            self.memory[address as usize]
-        }
-
-        fn write(&mut self, address: u16, value: u8) {
-            self.memory[address as usize] = value;
-        }
-
-        fn get_size(&self) -> usize {
-            self.memory.len()
-        }
-    }
+    use crate::memory::tests;
 
     #[test]
-    fn can_fetch_next_op() {
-        let mut memory = Box::new(MockMemory::new());
-        memory.write(0x0000, 0x01);
+    fn can_fetch_next_op() -> Result<(), AddressError> {
+        let mut memory: Box<tests::MockMemory> = Box::default();
+        memory.write(0x0000, 0x01)?;
         let mut bus = AddressBus::new(memory);
-        assert_eq!(bus.fetch_next_op(), 0x01);
+
+        assert_eq!(bus.fetch_next_op()?, 0x01);
         assert_eq!(bus.get_pc(), 0x0001);
+        Ok(())
     }
 
     #[test]
     fn has_debug_fmt() {
-        let memory = Box::new(MockMemory::new());
+        let memory = Box::new(tests::MockMemory::new());
         let bus = AddressBus::new(memory);
+
         let debug_msg = format!("{:?}", bus);
         assert_eq!(debug_msg, "AddressBus { pc: 0x0000, size: 256 }");
+    }
+
+    #[test]
+    #[should_panic]
+    fn fetch_next_op_panics_on_invalid_address() {
+        let memory = Box::new(tests::MockMemory::new());
+        let mut bus = AddressBus::new(memory);
+
+        bus.set_pc(0x0100 - 1).unwrap();
+        // first fetch will succeed, but moves pc to 0x0100
+        bus.fetch_next_op().unwrap();
+        assert_eq!(bus.get_pc(), 0x0100);
+
+        // this fetch should panic
+        bus.fetch_next_op().unwrap();
     }
 }
