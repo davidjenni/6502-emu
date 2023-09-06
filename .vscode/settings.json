@@ -1,5 +1,16 @@
 {
-  "cSpell.words": ["bitfield", "MSBASIC"],
+  "cSpell.words": [
+    "bitfield",
+    "clippy",
+    "LLDB",
+    "MSBASIC",
+    "proto",
+    "rustacean",
+    "Rustaceans",
+    "rustfmt",
+    "rustup",
+    "tlsv"
+  ],
   "editor.defaultFormatter": "rust-lang.rust-analyzer",
   "editor.formatOnSave": true,
   "rust-analyzer.check.command": "clippy"
