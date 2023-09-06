@@ -39,6 +39,11 @@ jobs:
         run: |
           cargo clippy --all-targets --all-features -- -v
 
+      - uses: DavidAnson/markdownlint-cli2-action@v12
+        name: Markdown linter
+        with:
+          globs: '**/*.md'
+
   build-test:
     needs: check
     runs-on: ${{ matrix.os }}
