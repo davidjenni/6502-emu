@@ -1,10 +1,12 @@
 use crate::address_bus::AddressBus;
-use crate::memory::AddressError;
 use crate::memory::Memory;
 use crate::status_register::StatusRegister;
+use crate::CpuController;
+use crate::CpuError;
 
 #[derive(Debug)]
-pub enum AddressingMode {
+#[allow(dead_code)] // TODO remove
+enum AddressingMode {
     Implied,          // CLC
     Accumulator,      // ASL A
     Immediate,        // LDA #10
@@ -27,6 +29,35 @@ pub struct Cpu {
     pub index_y: u8,
     pub status: StatusRegister,
     pub address_bus: AddressBus,
+
+    program_loaded: bool,
+}
+
+impl CpuController for Cpu {
+    fn reset(&mut self) -> Result<(), CpuError> {
+        todo!()
+        // Ok(())
+    }
+
+    fn run(&mut self) -> Result<(), CpuError> {
+        todo!()
+        // Ok(())
+    }
+
+    fn step(&mut self) -> Result<(), CpuError> {
+        if !self.program_loaded {
+            return Err(CpuError::NotInitialized);
+        }
+        // HACK TODO implement proper instruction decoding
+        self.get_effective_operand(AddressingMode::Immediate)
+            .unwrap();
+        Err(CpuError::NotInitialized)
+    }
+
+    fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
+        self.program_loaded = true;
+        self.address_bus.load_program(start_addr, program)
+    }
 }
 
 impl Cpu {
@@ -37,21 +68,17 @@ impl Cpu {
             index_y: 0,
             status: StatusRegister::new(),
             address_bus: AddressBus::new(memory),
+            program_loaded: false,
         }
-    }
-
-    pub fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), AddressError> {
-        self.address_bus.load_program(start_addr, program)?;
-        Ok(())
     }
 
     /// Fetches bytes according to addressing mode to calculate effective address;
     /// it also moves the PC to the next instruction.
-    pub fn get_effective_address(&mut self, mode: AddressingMode) -> Result<u16, AddressError> {
+    fn get_effective_address(&mut self, mode: AddressingMode) -> Result<u16, CpuError> {
         match mode {
-            AddressingMode::Implied => Err(AddressError::InvalidAddressingMode),
-            AddressingMode::Accumulator => Err(AddressError::InvalidAddressingMode),
-            AddressingMode::Immediate => Err(AddressError::InvalidAddressingMode),
+            AddressingMode::Implied => Err(CpuError::InvalidAddressingMode),
+            AddressingMode::Accumulator => Err(CpuError::InvalidAddressingMode),
+            AddressingMode::Immediate => Err(CpuError::InvalidAddressingMode),
             AddressingMode::ZeroPage => Ok(self.address_bus.fetch_byte_at_pc()? as u16),
             AddressingMode::ZeroPageX => Ok(self
                 .address_bus
@@ -104,11 +131,11 @@ impl Cpu {
         }
     }
 
-    pub fn get_effective_operand(&mut self, mode: AddressingMode) -> Result<u8, AddressError> {
+    fn get_effective_operand(&mut self, mode: AddressingMode) -> Result<u8, CpuError> {
         match mode {
             AddressingMode::Immediate => self.address_bus.fetch_byte_at_pc(),
             AddressingMode::Accumulator => Ok(self.accumulator),
-            AddressingMode::Relative => Err(AddressError::InvalidAddressingMode),
+            AddressingMode::Relative => Err(CpuError::InvalidAddressingMode),
             _ => {
                 let effective_address = self.get_effective_address(mode)?;
                 self.address_bus.read(effective_address)
@@ -120,15 +147,15 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::tests;
+    use crate::memory::RamMemory;
 
     const START_ADDR: u16 = 0x0300;
     const ZERO_PAGE_ADDR: u8 = 0xE0;
     const OP_CODE: u8 = 0xa5; // arbitrary opcode used for unit testing
     const EXPECTED: u8 = 42;
 
-    fn setup_test_cpu(program: &[u8]) -> Result<Cpu, AddressError> {
-        let mut cpu = Cpu::new(Box::default() as Box<tests::MockMemory>);
+    fn setup_test_cpu(program: &[u8]) -> Result<Cpu, CpuError> {
+        let mut cpu = Cpu::new(Box::default() as Box<RamMemory>);
 
         cpu.load_program(START_ADDR, program)?;
         cpu.address_bus.set_pc(START_ADDR)?;
@@ -140,7 +167,7 @@ mod tests {
         Ok(cpu)
     }
 
-    fn populate_zero_page(bus: &mut AddressBus, data: &[u8]) -> Result<(), AddressError> {
+    fn populate_zero_page(bus: &mut AddressBus, data: &[u8]) -> Result<(), CpuError> {
         bus.load_program(ZERO_PAGE_ADDR as u16, data)?;
         Ok(())
     }
@@ -153,13 +180,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "InvalidAddressingMode")]
     fn get_effective_operand_implied() {
-        let mut cpu = Cpu::new(Box::default() as Box<tests::MockMemory>);
+        let mut cpu = Cpu::new(Box::default() as Box<RamMemory>);
 
         cpu.get_effective_operand(AddressingMode::Implied).unwrap();
     }
 
     #[test]
-    fn get_effective_operand_accumulator() -> Result<(), AddressError> {
+    fn get_effective_operand_accumulator() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE])?;
         cpu.accumulator = EXPECTED;
 
@@ -170,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_immediate() -> Result<(), AddressError> {
+    fn get_effective_operand_immediate() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, EXPECTED])?;
 
         let res = cpu.get_effective_operand(AddressingMode::Immediate)?;
@@ -180,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_zero_page() -> Result<(), AddressError> {
+    fn get_effective_operand_zero_page() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
 
         populate_zero_page(&mut cpu.address_bus, &[EXPECTED])?;
@@ -192,7 +219,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_zero_page_indexed_x() -> Result<(), AddressError> {
+    fn get_effective_operand_zero_page_indexed_x() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
 
         populate_zero_page(&mut cpu.address_bus, &[0xaa, 0xbb, 0xcc, EXPECTED])?;
@@ -206,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_zero_page_indexed_y() -> Result<(), AddressError> {
+    fn get_effective_operand_zero_page_indexed_y() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
 
         populate_zero_page(&mut cpu.address_bus, &[0xaa, 0xbb, EXPECTED])?;
@@ -220,7 +247,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_absolute() -> Result<(), AddressError> {
+    fn get_effective_operand_absolute() -> Result<(), CpuError> {
         // abs address at offset 0x08 from start:
         let mut cpu = setup_test_cpu(&[
             // abs address at offset 0x08 from start:
@@ -234,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_absolute_indexed_x() -> Result<(), AddressError> {
+    fn get_effective_operand_absolute_indexed_x() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[
             // abs address at offset 0x06 from start, then indexed by X:
             //  0,   1,    2,    3,    4,    5,    6,    7,    8,        9
@@ -248,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_absolute_indexed_y() -> Result<(), AddressError> {
+    fn get_effective_operand_absolute_indexed_y() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[
             // abs address at offset 0x06 from start, then indexed by X:
             //  0,   1,    2,    3,    4,    5,    6,    7,    8,        9
@@ -262,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_indexed_x_indirect() -> Result<(), AddressError> {
+    fn get_effective_operand_indexed_x_indirect() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
         populate_zero_page(&mut cpu.address_bus, &[0xaa, 0xbb, 0x21, 0x03])?;
         cpu.address_bus.write(0x0321, EXPECTED)?;
@@ -275,7 +302,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_operand_indirect_indexed_y() -> Result<(), AddressError> {
+    fn get_effective_operand_indirect_indexed_y() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
         populate_zero_page(&mut cpu.address_bus, &[0x1F, 0x03])?;
         cpu.address_bus.write(0x0321, EXPECTED)?;
@@ -290,7 +317,7 @@ mod tests {
     //============= get_effective_address tests =============
     // these addressing modes cannot be tested with a full operand handling
     #[test]
-    fn get_effective_address_relative_forward() -> Result<(), AddressError> {
+    fn get_effective_address_relative_forward() -> Result<(), CpuError> {
         let offset: i8 = 42;
         let mut cpu = setup_test_cpu(&[OP_CODE, offset as u8])?;
 
@@ -301,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_address_relative_backward() -> Result<(), AddressError> {
+    fn get_effective_address_relative_backward() -> Result<(), CpuError> {
         let offset: i8 = 42;
         // negate offset:
         let mut cpu = setup_test_cpu(&[OP_CODE, -offset as u8])?;
@@ -314,7 +341,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_address_indirect() -> Result<(), AddressError> {
+    fn get_effective_address_indirect() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[
             // indirect address at offset 0x08 from start:
             //  0,   1,    2,    3,    4,    5,    6,    7,    8,        9
@@ -327,7 +354,7 @@ mod tests {
     }
 
     #[test]
-    fn get_effective_address_indirect_6502bug() -> Result<(), AddressError> {
+    fn get_effective_address_indirect_6502bug() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[
             // indirect address at offset 0x08 from start:
             //  0,   1,    2,    3,    4,    5,    6,    7,    8,        9

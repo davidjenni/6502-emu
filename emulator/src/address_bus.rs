@@ -1,4 +1,5 @@
-use crate::memory::{AddressError, Memory};
+use crate::memory::Memory;
+use crate::CpuError;
 
 pub struct AddressBus {
     memory: Box<dyn Memory>,
@@ -10,22 +11,22 @@ impl AddressBus {
         AddressBus { memory, pc: 0 }
     }
 
-    pub fn fetch_byte_at_pc(&mut self) -> Result<u8, AddressError> {
+    pub fn fetch_byte_at_pc(&mut self) -> Result<u8, CpuError> {
         let op = self.memory.read(self.pc)?;
         self.pc += 1;
         Ok(op)
     }
 
-    pub fn fetch_word_at_pc(&mut self) -> Result<u16, AddressError> {
+    pub fn fetch_word_at_pc(&mut self) -> Result<u16, CpuError> {
         // little endian, so low byte is read first:
         let lo = self.fetch_byte_at_pc()? as u16;
         let hi = self.fetch_byte_at_pc()? as u16;
         Ok((hi << 8) | lo)
     }
 
-    pub fn set_pc(&mut self, address: u16) -> Result<(), AddressError> {
+    pub fn set_pc(&mut self, address: u16) -> Result<(), CpuError> {
         if (address as usize) >= self.memory.get_size() {
-            return Err(AddressError::InvalidAddress);
+            return Err(CpuError::InvalidAddress);
         }
         self.pc = address;
         Ok(())
@@ -35,29 +36,29 @@ impl AddressBus {
         self.pc
     }
 
-    pub fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), AddressError> {
+    pub fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
         self.memory.load_program(start_addr, program)?;
         Ok(())
     }
 
-    pub fn read(&self, address: u16) -> Result<u8, AddressError> {
+    pub fn read(&self, address: u16) -> Result<u8, CpuError> {
         self.memory.read(address)
     }
 
-    pub fn read_word(&self, address: u16) -> Result<u16, AddressError> {
+    pub fn read_word(&self, address: u16) -> Result<u16, CpuError> {
         // little endian, so low byte is read first:
         let lo = self.read(address)? as u16;
         let hi = self.read(address + 1)? as u16;
         Ok((hi << 8) | lo)
     }
 
-    pub fn read_zero_page_word(&self, zero_page_addr: u8) -> Result<u16, AddressError> {
+    pub fn read_zero_page_word(&self, zero_page_addr: u8) -> Result<u16, CpuError> {
         let lo = self.read(zero_page_addr as u16)? as u16;
         let hi = self.read(zero_page_addr.wrapping_add(1) as u16)? as u16;
         Ok((hi << 8) | lo)
     }
 
-    pub fn write(&mut self, address: u16, value: u8) -> Result<(), AddressError> {
+    pub fn write(&mut self, address: u16, value: u8) -> Result<(), CpuError> {
         self.memory.write(address, value)
     }
 }
@@ -76,11 +77,11 @@ impl std::fmt::Debug for AddressBus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::tests;
+    use crate::memory::RamMemory;
 
     #[test]
-    fn can_fetch_next_op() -> Result<(), AddressError> {
-        let mut memory: Box<tests::MockMemory> = Box::default();
+    fn can_fetch_next_op() -> Result<(), CpuError> {
+        let mut memory: Box<RamMemory> = Box::default();
         memory.write(0x0000, 0x01)?;
         let mut bus = AddressBus::new(memory);
 
@@ -91,17 +92,17 @@ mod tests {
 
     #[test]
     fn has_debug_fmt() {
-        let memory = Box::new(tests::MockMemory::new());
+        let memory: Box<RamMemory> = Box::default();
         let bus = AddressBus::new(memory);
 
         let debug_msg = format!("{:?}", bus);
-        assert_eq!(debug_msg, "AddressBus { pc: 0x0000, size: 1024 }");
+        assert_eq!(debug_msg, "AddressBus { pc: 0x0000, size: 65536 }");
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "with overflow")]
     fn fetch_next_op_panics_on_invalid_address() {
-        let memory: Box<tests::MockMemory> = Box::default();
+        let memory: Box<RamMemory> = Box::default();
         let mut bus = AddressBus::new(memory);
 
         let top_address = bus.memory.get_size() as u16;
@@ -115,8 +116,8 @@ mod tests {
     }
 
     #[test]
-    fn load_program() -> Result<(), AddressError> {
-        let memory: Box<tests::MockMemory> = Box::default();
+    fn load_program() -> Result<(), CpuError> {
+        let memory: Box<RamMemory> = Box::new(RamMemory::new(1024));
         let mut bus = AddressBus::new(memory);
 
         let program = [0x01, 0x02, 0x03];
