@@ -1,6 +1,11 @@
 use crate::cpu::{AddressingMode, Cpu};
-use crate::engine::handlers::*;
 use crate::engine::opcodes::OpCode;
+use crate::engine::ops::alu::*;
+use crate::engine::ops::branch_jump::*;
+use crate::engine::ops::execute_nop;
+use crate::engine::ops::flag_branch::*;
+use crate::engine::ops::interrupt::*;
+use crate::engine::ops::transfer::*;
 use crate::CpuError;
 
 type OpCodeExecute = fn(AddressingMode, &mut Cpu) -> Result<(), CpuError>;
@@ -66,6 +71,12 @@ pub fn decode(opcode: u8) -> Result<DecodedInstruction, CpuError> {
         }),
 
         // ALU operations:
+        0x65 => Ok(DecodedInstruction {
+            opcode: OpCode::ADC,
+            mode: AddressingMode::ZeroPage,
+            execute: execute_adc,
+        }),
+
         0xE5 => Ok(DecodedInstruction {
             opcode: OpCode::SBC,
             mode: AddressingMode::ZeroPage,
