@@ -1,4 +1,4 @@
-// See algo and assembly code in euclid_gdc.md
+// See algo and assembly code in euclid_gcd.md
 
 use mos6502_emulator::{create, CpuError, CpuType};
 

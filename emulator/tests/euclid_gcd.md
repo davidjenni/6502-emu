@@ -1,4 +1,4 @@
-# Calculate GDC via Euclid's substraction algorithm
+# Calculate GDC via Euclid's subtraction algorithm
 
 <https://en.wikipedia.org/wiki/Euclidean_algorithm#Implementations>
 
