@@ -1,3 +1,3 @@
 pub mod decoder;
-mod handlers;
 pub mod opcodes;
+mod ops;
