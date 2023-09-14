@@ -32,6 +32,7 @@ pub trait CpuController {
     fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError>;
     fn get_register_snapshot(&self) -> CpuRegisterSnapshot;
     fn get_byte_at(&self, address: u16) -> Result<u8, CpuError>;
+    fn set_byte_at(&mut self, address: u16, value: u8) -> Result<(), CpuError>;
 }
 
 pub enum CpuType {
