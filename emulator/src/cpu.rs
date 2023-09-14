@@ -86,6 +86,10 @@ impl CpuController for Cpu {
     fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {
         self.address_bus.read(address)
     }
+
+    fn set_byte_at(&mut self, address: u16, value: u8) -> Result<(), CpuError> {
+        self.address_bus.write(address, value)
+    }
 }
 
 impl Cpu {

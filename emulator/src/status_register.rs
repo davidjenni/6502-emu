@@ -3,14 +3,14 @@ use std::fmt;
 
 #[bitfield(u8, order = msb)]
 pub struct StatusRegister {
-    negative: bool,          // N, bit 7
-    overflow: bool,          // V, bit 6
-    unused_: bool,           // n/a, bit 5 is an unused expansion bit
-    break_command: bool,     // B, bit 4
-    decimal_mode: bool,      // D, bit 3
-    interrupt_disable: bool, // I, bit 2
-    zero: bool,              // Z, bit 1
-    carry: bool,             // C, bit 0
+    pub negative: bool,          // N, bit 7
+    pub overflow: bool,          // V, bit 6
+    unused_: bool,               // n/a, bit 5 is an unused expansion bit
+    pub break_command: bool,     // B, bit 4
+    pub decimal_mode: bool,      // D, bit 3
+    pub interrupt_disable: bool, // I, bit 2
+    pub zero: bool,              // Z, bit 1
+    pub carry: bool,             // C, bit 0
 }
 
 impl StatusRegister {
