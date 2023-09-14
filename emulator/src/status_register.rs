@@ -20,6 +20,18 @@ impl StatusRegister {
         self.set_negative(value & SIGN_BIT == SIGN_BIT);
         self.set_zero(value == 0);
     }
+
+    pub fn set_break(&mut self, value: bool) {
+        self.set_break_command(value);
+    }
+
+    pub fn get_break(&self) -> bool {
+        self.break_command()
+    }
+
+    pub fn get_status(&self) -> u8 {
+        self.0
+    }
 }
 
 impl fmt::Display for StatusRegister {
@@ -45,13 +57,13 @@ mod tests {
 
     #[test]
     fn new_status_register_is_zero() {
-        let sr = StatusRegister::new();
+        let sr = StatusRegister::default();
         assert_eq!(sr.0, 0);
     }
 
     #[test]
     fn can_set_and_clear_carry() {
-        let mut sr = StatusRegister::new();
+        let mut sr = StatusRegister::default();
         assert!(!sr.carry());
         sr.set_carry(true);
         assert!(sr.carry());
@@ -62,7 +74,7 @@ mod tests {
 
     #[test]
     fn can_print_status_register() {
-        let mut sr = StatusRegister::new();
+        let mut sr = StatusRegister::default();
         sr.set_negative(true);
         sr.set_overflow(true);
         sr.set_break_command(false);
@@ -77,7 +89,7 @@ mod tests {
 
     #[test]
     fn update_status_register_from_register_value() {
-        let mut sr = StatusRegister::new();
+        let mut sr = StatusRegister::default();
 
         // test with 3 different values: zero, negative, positive
         sr.update_from(0);
@@ -97,5 +109,16 @@ mod tests {
         assert!(!sr.zero());
         let b = format!("{}", sr);
         assert_eq!(b, "0x00:  N=0, V=0, B=0, D=0, I=0, Z=0, C=0");
+    }
+
+    #[test]
+    fn can_set_and_clear_break_command() {
+        let mut sr = StatusRegister::default();
+        assert!(!sr.break_command());
+        sr.set_break_command(true);
+        assert!(sr.break_command());
+        sr.set_break_command(false);
+        assert!(!sr.break_command());
+        sr.set_break_command(true);
     }
 }

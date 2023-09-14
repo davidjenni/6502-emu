@@ -1,12 +1,15 @@
 use crate::address_bus::AddressBus;
+use crate::engine::decoder;
+use crate::engine::decoder::DecodedInstruction;
 use crate::memory::Memory;
 use crate::status_register::StatusRegister;
 use crate::CpuController;
 use crate::CpuError;
+use crate::CpuRegisterSnapshot;
 
 #[derive(Debug)]
 #[allow(dead_code)] // TODO remove
-enum AddressingMode {
+pub enum AddressingMode {
     Implied,          // CLC
     Accumulator,      // ASL A
     Immediate,        // LDA #10
@@ -28,6 +31,8 @@ pub struct Cpu {
     pub index_x: u8,
     pub index_y: u8,
     pub status: StatusRegister,
+    pub stack_pointer: u16,
+
     pub address_bus: AddressBus,
 
     program_loaded: bool,
@@ -39,24 +44,47 @@ impl CpuController for Cpu {
         // Ok(())
     }
 
-    fn run(&mut self) -> Result<(), CpuError> {
-        todo!()
-        // Ok(())
+    fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError> {
+        if start_addr.is_some() {
+            self.address_bus.set_pc(start_addr.unwrap())?;
+        }
+        loop {
+            self.step()?;
+            if self.status.get_break() {
+                break;
+            }
+        }
+        Ok(self.get_register_snapshot())
     }
 
     fn step(&mut self) -> Result<(), CpuError> {
         if !self.program_loaded {
             return Err(CpuError::NotInitialized);
         }
-        // HACK TODO implement proper instruction decoding
-        self.get_effective_operand(AddressingMode::Immediate)
-            .unwrap();
-        Err(CpuError::NotInitialized)
+
+        let decoded = self.fetch_and_decode()?;
+        (decoded.execute)(decoded.mode, self)?;
+        Ok(())
     }
 
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
         self.program_loaded = true;
         self.address_bus.load_program(start_addr, program)
+    }
+
+    fn get_register_snapshot(&self) -> crate::CpuRegisterSnapshot {
+        crate::CpuRegisterSnapshot {
+            accumulator: self.accumulator,
+            x_register: self.index_x,
+            y_register: self.index_y,
+            stack_pointer: self.stack_pointer,
+            program_counter: self.address_bus.get_pc(),
+            status: self.status.get_status(),
+        }
+    }
+
+    fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {
+        self.address_bus.read(address)
     }
 }
 
@@ -68,17 +96,21 @@ impl Cpu {
             index_y: 0,
             status: StatusRegister::new(),
             address_bus: AddressBus::new(memory),
+            stack_pointer: 0x01FF, // TODO: need functional stack pointer
             program_loaded: false,
         }
     }
 
+    fn fetch_and_decode(&mut self) -> Result<DecodedInstruction, CpuError> {
+        let opcode = self.address_bus.fetch_byte_at_pc()?;
+        let res = decoder::decode(opcode)?;
+        Ok(res)
+    }
+
     /// Fetches bytes according to addressing mode to calculate effective address;
     /// it also moves the PC to the next instruction.
-    fn get_effective_address(&mut self, mode: AddressingMode) -> Result<u16, CpuError> {
+    pub fn get_effective_address(&mut self, mode: AddressingMode) -> Result<u16, CpuError> {
         match mode {
-            AddressingMode::Implied => Err(CpuError::InvalidAddressingMode),
-            AddressingMode::Accumulator => Err(CpuError::InvalidAddressingMode),
-            AddressingMode::Immediate => Err(CpuError::InvalidAddressingMode),
             AddressingMode::ZeroPage => Ok(self.address_bus.fetch_byte_at_pc()? as u16),
             AddressingMode::ZeroPageX => Ok(self
                 .address_bus
@@ -128,10 +160,12 @@ impl Cpu {
                     + self.index_y as u16;
                 Ok(word)
             }
+            // Implied, Accumulator, Immediate modes have no address
+            _ => Err(CpuError::InvalidAddressingMode),
         }
     }
 
-    fn get_effective_operand(&mut self, mode: AddressingMode) -> Result<u8, CpuError> {
+    pub fn get_effective_operand(&mut self, mode: AddressingMode) -> Result<u8, CpuError> {
         match mode {
             AddressingMode::Immediate => self.address_bus.fetch_byte_at_pc(),
             AddressingMode::Accumulator => Ok(self.accumulator),
