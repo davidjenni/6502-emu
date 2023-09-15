@@ -62,6 +62,78 @@ pub fn execute_sty(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     Ok(())
 }
 
+// TAX:    A -> X
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_tax(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.index_x = cpu.accumulator;
+    cpu.status.update_from(cpu.index_x);
+    Ok(())
+}
+
+// TAY:    A -> Y
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_tay(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.index_y = cpu.accumulator;
+    cpu.status.update_from(cpu.index_y);
+    Ok(())
+}
+
+// TSX:    SP -> X
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_tsx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.index_x = cpu.stack_pointer as u8; // stack pointer has fixed 0x01 high byte
+    cpu.status.update_from(cpu.index_x);
+    Ok(())
+}
+
+// TXA:    X -> A
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_txa(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.accumulator = cpu.index_x;
+    cpu.status.update_from(cpu.accumulator);
+    Ok(())
+}
+
+// TXS:    X -> SP
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_txs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.stack_pointer = cpu.index_x as u16 | 0x0100; // stack pointer has fixed 0x01 high byte
+    cpu.status.update_from(cpu.index_x);
+    Ok(())
+}
+
+// TYA:    Y -> A
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_tya(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.accumulator = cpu.index_y;
+    cpu.status.update_from(cpu.accumulator);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,7 +147,6 @@ mod tests {
     fn setup_cpu_for_load(value: u8) -> Cpu {
         let mut cpu = create_cpu();
         cpu.address_bus.write(ZERO_PAGE_ADDR, value).unwrap();
-
         cpu
     }
 
@@ -210,5 +281,82 @@ mod tests {
         assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), test_val);
         assert!(!cpu.status.zero());
         assert!(cpu.status.negative());
+    }
+
+    #[test]
+    fn test_tax() {
+        let mut cpu = create_cpu();
+        cpu.accumulator = 0x42;
+        execute_tax(AddressingMode::Implied, &mut cpu).unwrap();
+        assert_eq!(cpu.index_x, 0x42);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+
+        // is negative flag updated?
+        let test_val = (-123 & 0xFF) as u8;
+        cpu.accumulator = test_val;
+        cpu.address_bus.set_pc(NEXT_PC).unwrap();
+        execute_tax(AddressingMode::Implied, &mut cpu).unwrap();
+        assert_eq!(cpu.index_x, test_val);
+        assert!(!cpu.status.zero());
+        assert!(cpu.status.negative());
+    }
+
+    #[test]
+    #[should_panic(expected = "InvalidAddressingMode")]
+    fn test_tay_illegal_address_mode() {
+        let mut cpu = create_cpu();
+        cpu.accumulator = 0x42;
+        execute_tay(AddressingMode::Immediate, &mut cpu).unwrap();
+    }
+
+    #[test]
+    fn test_tay() {
+        let mut cpu = create_cpu();
+        cpu.accumulator = 0x42;
+        execute_tay(AddressingMode::Implied, &mut cpu).unwrap();
+        assert_eq!(cpu.index_y, 0x42);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_tsx() {
+        let mut cpu = create_cpu();
+        cpu.stack_pointer = 0x0142;
+        execute_tsx(AddressingMode::Implied, &mut cpu).unwrap();
+        assert_eq!(cpu.index_x, 0x42);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_txa() {
+        let mut cpu = create_cpu();
+        cpu.index_x = 0x42;
+        execute_txa(AddressingMode::Implied, &mut cpu).unwrap();
+        assert_eq!(cpu.accumulator, 0x42);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_txs() {
+        let mut cpu = create_cpu();
+        cpu.index_x = 0x42;
+        execute_txs(AddressingMode::Implied, &mut cpu).unwrap();
+        assert_eq!(cpu.stack_pointer, 0x0142); // stack pointer has fixed 0x01 high byte
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_tya() {
+        let mut cpu = create_cpu();
+        cpu.index_y = 0x42;
+        execute_tya(AddressingMode::Implied, &mut cpu).unwrap();
+        assert_eq!(cpu.accumulator, 0x42);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
     }
 }
