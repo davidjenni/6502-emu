@@ -7,7 +7,7 @@ use crate::CpuController;
 use crate::CpuError;
 use crate::CpuRegisterSnapshot;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[allow(dead_code)] // TODO remove
 pub enum AddressingMode {
     Implied,          // CLC
