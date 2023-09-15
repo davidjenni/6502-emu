@@ -61,6 +61,13 @@ impl AddressBus {
     pub fn write(&mut self, address: u16, value: u8) -> Result<(), CpuError> {
         self.memory.write(address, value)
     }
+
+    pub fn write_word(&mut self, address: u16, value: u16) -> Result<(), CpuError> {
+        // self.memory.write(address, (value & 0xFF) as u8)?;
+        self.memory.write(address, value as u8)?;
+        self.memory.write(address + 1, (value >> 8) as u8)?;
+        Ok(())
+    }
 }
 
 impl std::fmt::Debug for AddressBus {
