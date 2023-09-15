@@ -16,28 +16,76 @@ function gcd(a, b)
 
 ## Coded in 6502 assembly
 
-```code
-; zero page addresses:
-VAR_A = $40
-VAR_B = $41
+Can use [online 6502 assembler](https://www.masswerk.at/6502/assembler.html) for small programs like this.
 
-.org $0600
-; start:
-0600 A5 40      LDA VAR_A
-; diff:
-0602 38         SEC
-0603 E5 41      SBC VAR_B
-0605 F0 12      BEQ done
-0607 30 05      BMI swap
-0609 85 40      STA VAR_A
-060B 4C 02 06   JMP diff
-; swap
-060E A6 40      LDX VAR_A
-0610 A4 41      LDY VAR_B
-0612 86 41      STX VAR_B
-0614 84 40      STY VAR_A
-0616 4C 00 06   JMP start
-; done:
-0619 A5 40      LDA VAR_A
-061B 00         BRK
+```code
+; Euclid's GCD using subtraction only
+
+.org $0040
+VAR_A:
+.byte $78 ; 126
+VAR_B:
+.byte 31  ; 49
+
+.org $0200
+start:
+  LDA VAR_A
+diff:
+  SEC
+  SBC VAR_B
+  BEQ done
+  BMI swap
+  STA VAR_A
+  JMP diff
+swap:
+  LDX VAR_A
+  LDY VAR_B
+  STX VAR_B
+  STY VAR_A
+  JMP start
+done:
+  LDA VAR_A
+  BRK
+```
+
+Assembled:
+
+```code
+LOC   CODE         LABEL         INSTRUCTION
+
+                   ; Euclid's GCD using subtraction only
+
+0040                             * = $0040
+0040               VAR_A
+0040  78                         .BYTE $78 ; 126
+0041               VAR_B
+0041  1F                         .BYTE $1F ; 49
+0200                             * = $0200
+0200               START
+0200  A5 40                      LDA $40
+0202               DIFF
+0202  38                         SEC
+0203  E5 41                      SBC $41
+0205  F0 12                      BEQ $0219
+0207  30 05                      BMI $020E
+0209  85 40                      STA $40
+020B  4C 02 02                   JMP $0202
+020E               SWAP
+020E  A6 40                      LDX $40
+0210  A4 41                      LDY $41
+0212  86 41                      STX $41
+0214  84 40                      STY $40
+0216  4C 00 02                   JMP $0200
+0219               DONE
+0219  A5 40                      LDA $40
+021B  00                         BRK
+```
+
+Hex code:
+
+```code
+0200: A5 40 38 E5 41 F0 12 30
+0208: 05 85 40 4C 02 02 A6 40
+0210: A4 41 86 41 84 40 4C 00
+0218: 02 A5 40 00
 ```
