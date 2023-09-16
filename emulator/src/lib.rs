@@ -2,18 +2,22 @@ use crate::cpu::Cpu;
 use crate::memory::RamMemory;
 
 pub mod address_bus;
+mod address_bus2;
 mod cpu;
 mod engine;
 mod memory;
+mod memory_access;
+mod stack_pointer;
 mod status_register;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum CpuError {
     NotInitialized,
     InvalidAddress,
     InvalidAddressingMode,
     InvalidOpcode,
     MissingOperand,
+    StackOverflow,
 }
 
 pub struct CpuRegisterSnapshot {

@@ -2,10 +2,14 @@ use crate::address_bus::AddressBus;
 use crate::engine::decoder;
 use crate::engine::decoder::DecodedInstruction;
 use crate::memory::Memory;
+use crate::memory_access::Memory2;
+use crate::stack_pointer::StackPointer;
+use crate::stack_pointer::StackPointerImpl;
 use crate::status_register::StatusRegister;
 use crate::CpuController;
 use crate::CpuError;
 use crate::CpuRegisterSnapshot;
+// use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[allow(dead_code)] // TODO remove
@@ -25,6 +29,7 @@ pub enum AddressingMode {
     IndirectIndexedY, // LDA ($10),Y
 }
 
+#[allow(dead_code)] // TODO remove
 #[derive(Debug)]
 pub struct Cpu {
     pub accumulator: u8,
@@ -35,16 +40,20 @@ pub struct Cpu {
 
     pub address_bus: AddressBus,
 
+    memory: Memory2,
+    stack: StackPointerImpl,
     program_loaded: bool,
 }
 
 impl CpuController for Cpu {
     fn reset(&mut self) -> Result<(), CpuError> {
+        self.stack.reset()?;
         todo!()
         // Ok(())
     }
 
     fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError> {
+        self.stack.push_word(&mut self.memory, 12)?;
         if start_addr.is_some() {
             self.address_bus.set_pc(start_addr.unwrap())?;
         }
@@ -101,6 +110,8 @@ impl Cpu {
             status: StatusRegister::new(),
             address_bus: AddressBus::new(memory),
             stack_pointer: 0x01FF, // TODO: need functional stack pointer
+            memory: Memory2::new(64 * 1024),
+            stack: StackPointerImpl::new(),
             program_loaded: false,
         }
     }
