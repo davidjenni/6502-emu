@@ -3,7 +3,7 @@ use crate::engine::opcodes::OpCode;
 use crate::engine::ops::alu::*;
 use crate::engine::ops::branch_jump::*;
 use crate::engine::ops::execute_nop;
-use crate::engine::ops::flag_branch::*;
+use crate::engine::ops::flag_compare::*;
 use crate::engine::ops::interrupt::*;
 use crate::engine::ops::transfer::*;
 use crate::CpuError;
