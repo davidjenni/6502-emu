@@ -6,12 +6,6 @@ pub trait AddressBus {
     fn fetch_word_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u16, CpuError>;
     fn set_pc(&mut self, address: u16) -> Result<(), CpuError>;
     fn get_pc(&self) -> u16;
-    fn load_program(
-        &mut self,
-        mem: &mut dyn MemoryAccess,
-        start_addr: u16,
-        program: &[u8],
-    ) -> Result<(), CpuError>;
 }
 
 #[derive(Clone)]
@@ -49,16 +43,6 @@ impl AddressBus for AddressBusImpl {
 
     fn get_pc(&self) -> u16 {
         self.pc
-    }
-
-    fn load_program(
-        &mut self,
-        mem: &mut dyn MemoryAccess,
-        start_addr: u16,
-        program: &[u8],
-    ) -> Result<(), CpuError> {
-        mem.load_program(start_addr, program)?;
-        Ok(())
     }
 }
 impl std::fmt::Debug for dyn AddressBus {

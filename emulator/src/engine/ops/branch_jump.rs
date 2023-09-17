@@ -119,21 +119,6 @@ pub fn execute_jsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     Ok(())
 }
 
-// RTI:    Return from interrupt
-// pull PC, add 1, put result in PC
-// status: n/c
-#[allow(dead_code)] // TODO remove
-pub fn execute_rti(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
-    if mode != AddressingMode::Implied {
-        return Err(CpuError::InvalidAddressingMode);
-    }
-    let status = cpu.stack.pop_byte(&cpu.memory)?;
-    let pc = cpu.stack.pop_word(&cpu.memory)?;
-    cpu.status.set_status(status & 0xCF); // ignore Break and undefined flags
-    cpu.address_bus.set_pc(pc)?;
-    Ok(())
-}
-
 // RTS:    Return from sub routine
 // pull PC, add 1, put result in PC
 // status: n/c
@@ -232,25 +217,6 @@ mod tests {
         assert_eq!(cpu.address_bus.get_pc(), 0x5432);
         // JSR pushes address of last byte of 3 byte instruction to stack:
         assert_eq!(cpu.stack.pop_word(&cpu.memory)?, 0x0124);
-        Ok(())
-    }
-
-    #[test]
-    fn rti() -> Result<(), CpuError> {
-        let mut cpu = Cpu::default();
-        cpu.stack.push_word(&mut cpu.memory, 0x1234)?;
-        const EXPECTED_STATUS: u8 = 0b1101_1011;
-        cpu.stack.push_byte(&mut cpu.memory, EXPECTED_STATUS)?;
-
-        execute_rti(AddressingMode::Implied, &mut cpu)?;
-
-        assert_eq!(cpu.address_bus.get_pc(), 0x1234);
-        assert!(cpu.status.negative());
-        assert!(cpu.status.overflow());
-        assert!(!cpu.status.break_command()); // bit4, break, is cleared by RTI
-        assert!(cpu.status.decimal_mode());
-        assert!(cpu.status.zero());
-        assert!(cpu.status.carry());
         Ok(())
     }
 
