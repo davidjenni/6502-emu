@@ -15,7 +15,7 @@ pub fn execute_adc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     let result = cpu.accumulator as u16 + operand as u16 + cpu.status.carry() as u16;
 
     let acc = result as u8;
-    let is_overflow = is_overflow(cpu.accumulator, operand, acc & 0x80);
+    let is_overflow = is_overflow(cpu.accumulator, operand, acc.into());
     cpu.status.set_overflow(is_overflow);
     cpu.accumulator = acc;
     cpu.status.update_from(acc);
@@ -29,28 +29,36 @@ pub fn execute_sbc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     if cpu.status.decimal_mode() {
         todo!("decimal mode not implemented");
     }
-    let borrow: i16 = if cpu.status.carry() { 0 } else { 1 };
     let operand = cpu.get_effective_operand(mode)?;
 
-    let result = cpu.accumulator as i16 - operand as i16 + borrow;
+    let (acc, carry, overflow) = subtract_with_carry(cpu.accumulator, operand, cpu.status.carry());
 
-    let acc = result as u8;
-    let is_overflow = is_overflow(cpu.accumulator, operand, acc & 0x80);
-    cpu.status.set_overflow(is_overflow);
+    cpu.status.set_overflow(overflow);
     cpu.accumulator = acc;
-    cpu.status.update_from(result as u8);
-    cpu.status.set_carry(result >= 0);
+    cpu.status.update_from(acc);
+    cpu.status.set_carry(carry);
     Ok(())
 }
 
-fn is_overflow(a: u8, b: u8, result_high_bit: u8) -> bool {
+pub fn subtract_with_carry(register: u8, operand: u8, carry: bool) -> (u8, bool, bool) {
+    let borrow: i16 = if carry { 0 } else { 1 };
+
+    let result = register as i16 - operand as i16 + borrow;
+
+    // let res_byte = result as u8;
+    let is_overflow = is_overflow(register, operand, result);
+    (result as u8, result >= 0, is_overflow)
+}
+
+fn is_overflow(a: u8, b: u8, result_high_bit: i16) -> bool {
+    let high_bit = (result_high_bit & 0x80) as u8;
     // Overflow bit is set when the sign of the result is not the same as the sign of both operands
     // see also MOS6502 Programmer's Manual, p. 11, section 2.2.1.1 Signed Arithmetic:
     //
     // "... The overflow occurs whenever the sign bit (bit 7) is changed as a result of the operation."
     let a_sign = a & 0x80;
     let b_sign = b & 0x80;
-    (a_sign == b_sign) && (a_sign != result_high_bit)
+    (a_sign == b_sign) && (a_sign != high_bit)
 }
 
 // Logical Operations:
