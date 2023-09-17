@@ -1,6 +1,6 @@
 pub mod alu;
 pub mod branch_jump;
-pub mod flag_branch;
+pub mod flag_compare;
 pub mod interrupt;
 pub mod transfer;
 
