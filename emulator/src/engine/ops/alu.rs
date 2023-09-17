@@ -1,4 +1,5 @@
 use crate::cpu::{AddressingMode, Cpu};
+use crate::memory_access::MemoryAccess;
 use crate::CpuError;
 
 // Arithmetic operations:
@@ -151,7 +152,7 @@ fn read_modify_write(
         (cpu.accumulator, None)
     } else {
         let address = cpu.get_effective_address(mode)?;
-        (cpu.address_bus.read(address)?, Some(address))
+        (cpu.memory.read(address)?, Some(address))
     };
 
     let (result, carry) = f(operand, cpu.status.carry());
@@ -162,7 +163,7 @@ fn read_modify_write(
     if mode == AddressingMode::Accumulator {
         cpu.accumulator = result;
     } else {
-        cpu.address_bus.write(address.unwrap(), result)?;
+        cpu.memory.write(address.unwrap(), result)?;
     }
 
     Ok(())
@@ -171,7 +172,7 @@ fn read_modify_write(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::RamMemory;
+    use crate::address_bus::AddressBus;
 
     const ZERO_PAGE_ADDR: u16 = 0x00E0;
     const NEXT_PC: u16 = 0x0200;
@@ -179,7 +180,7 @@ mod tests {
     // create a Cpu instance and write operand value into zero page address $00
     fn setup_cpu(operand: u8, carry: bool) -> Cpu {
         let mut cpu = create_cpu();
-        cpu.address_bus.write(0x0000, operand).unwrap();
+        cpu.memory.write(0x0000, operand).unwrap();
         // idiosyncrasy of 6502:
         // for first byte, carry flag must be cleared for ADC, set for SBC
         cpu.status.set_carry(carry);
@@ -188,16 +189,14 @@ mod tests {
 
     fn setup_cpu_zero_page(operand: u8) -> Cpu {
         let mut cpu = create_cpu();
-        cpu.address_bus.write(ZERO_PAGE_ADDR, operand).unwrap();
-        cpu.address_bus
-            .write(NEXT_PC, ZERO_PAGE_ADDR as u8)
-            .unwrap();
+        cpu.memory.write(ZERO_PAGE_ADDR, operand).unwrap();
+        cpu.memory.write(NEXT_PC, ZERO_PAGE_ADDR as u8).unwrap();
         cpu.address_bus.set_pc(NEXT_PC).unwrap();
         cpu
     }
 
     fn create_cpu() -> Cpu {
-        let mut cpu = Cpu::new(Box::default() as Box<RamMemory>);
+        let mut cpu = Cpu::default();
         cpu.address_bus.set_pc(0x0000).unwrap();
         cpu
     }
@@ -330,7 +329,7 @@ mod tests {
 
         let mut cpu = setup_cpu_zero_page(0b1010_1010);
         execute_asl(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), 0b0101_0100);
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), 0b0101_0100);
         assert!(!cpu.status.negative());
         assert!(!cpu.status.zero());
         assert!(cpu.status.carry());
@@ -353,7 +352,7 @@ mod tests {
 
         let mut cpu = setup_cpu_zero_page(0b1010_1010);
         execute_lsr(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), 0b0101_0101);
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), 0b0101_0101);
         assert!(!cpu.status.negative());
         assert!(!cpu.status.zero());
         assert!(!cpu.status.carry());

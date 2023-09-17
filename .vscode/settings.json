@@ -1,8 +1,10 @@
 {
   "cSpell.words": [
+    "automock",
     "bitfield",
     "clippy",
     "LLDB",
+    "mockall",
     "MSBASIC",
     "proto",
     "rustacean",

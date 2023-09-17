@@ -1,4 +1,6 @@
 use crate::cpu::{AddressingMode, Cpu};
+use crate::memory_access::MemoryAccess;
+use crate::stack_pointer::StackPointer;
 use crate::CpuError;
 
 // LDA/X/Y:
@@ -37,7 +39,7 @@ pub fn execute_ldy(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 pub fn execute_sta(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let val = cpu.accumulator;
-    cpu.address_bus.write(effective_address, val).unwrap();
+    cpu.memory.write(effective_address, val).unwrap();
     cpu.status.update_from(val);
     Ok(())
 }
@@ -47,7 +49,7 @@ pub fn execute_sta(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 pub fn execute_stx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let val = cpu.index_x;
-    cpu.address_bus.write(effective_address, val)?;
+    cpu.memory.write(effective_address, val)?;
     cpu.status.update_from(val);
     Ok(())
 }
@@ -57,7 +59,7 @@ pub fn execute_stx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 pub fn execute_sty(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let val = cpu.index_y;
-    cpu.address_bus.write(effective_address, val)?;
+    cpu.memory.write(effective_address, val)?;
     cpu.status.update_from(val);
     Ok(())
 }
@@ -93,7 +95,7 @@ pub fn execute_tsx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
-    cpu.index_x = cpu.stack_pointer as u8; // stack pointer has fixed 0x01 high byte
+    cpu.index_x = cpu.stack.get_sp().unwrap() as u8; // stack pointer has fixed 0x01 high byte
     cpu.status.update_from(cpu.index_x);
     Ok(())
 }
@@ -117,7 +119,7 @@ pub fn execute_txs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
-    cpu.stack_pointer = cpu.index_x as u16 | 0x0100; // stack pointer has fixed 0x01 high byte
+    cpu.stack.set_sp(0x0100 | cpu.index_x as u16)?; // stack pointer has fixed 0x01 high byte
     cpu.status.update_from(cpu.index_x);
     Ok(())
 }
@@ -137,7 +139,7 @@ pub fn execute_tya(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::RamMemory;
+    use crate::address_bus::AddressBus;
 
     const ZERO_PAGE_ADDR: u16 = 0x00E0;
     const NEXT_PC: u16 = 0x0300;
@@ -146,7 +148,7 @@ mod tests {
     // writes zero page address $E0 into next PC address $0300
     fn setup_cpu_for_load(value: u8) -> Cpu {
         let mut cpu = create_cpu();
-        cpu.address_bus.write(ZERO_PAGE_ADDR, value).unwrap();
+        cpu.memory.write(ZERO_PAGE_ADDR, value).unwrap();
         cpu
     }
 
@@ -155,10 +157,8 @@ mod tests {
     }
 
     fn create_cpu() -> Cpu {
-        let mut cpu = Cpu::new(Box::default() as Box<RamMemory>);
-        cpu.address_bus
-            .write(NEXT_PC, ZERO_PAGE_ADDR as u8)
-            .unwrap();
+        let mut cpu = Cpu::default();
+        cpu.memory.write(NEXT_PC, ZERO_PAGE_ADDR as u8).unwrap();
         cpu.address_bus.set_pc(NEXT_PC).unwrap();
         cpu
     }
@@ -196,7 +196,7 @@ mod tests {
         assert!(!cpu.status.zero());
         assert!(cpu.status.negative());
         // clear value in zero page address, status flags should be updated
-        cpu.address_bus.write(ZERO_PAGE_ADDR, 0).unwrap();
+        cpu.memory.write(ZERO_PAGE_ADDR, 0).unwrap();
         execute_ldx(AddressingMode::ZeroPage, &mut cpu).unwrap();
         assert_eq!(cpu.index_x, 0);
         assert!(cpu.status.zero());
@@ -219,7 +219,7 @@ mod tests {
         assert!(!cpu.status.zero());
         assert!(cpu.status.negative());
         // clear value in zero page address, status flags should be updated
-        cpu.address_bus.write(0x00E0, 0).unwrap();
+        cpu.memory.write(0x00E0, 0).unwrap();
         execute_ldy(AddressingMode::ZeroPage, &mut cpu).unwrap();
         assert_eq!(cpu.index_y, 0);
         assert!(cpu.status.zero());
@@ -231,7 +231,7 @@ mod tests {
         let mut cpu = setup_cpu_for_store();
         cpu.accumulator = 0x42;
         execute_sta(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), 0x42);
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), 0x42);
         assert!(!cpu.status.zero());
         assert!(!cpu.status.negative());
 
@@ -240,7 +240,7 @@ mod tests {
         cpu.accumulator = test_val;
         cpu.address_bus.set_pc(NEXT_PC).unwrap();
         execute_sta(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), test_val);
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), test_val);
         assert!(!cpu.status.zero());
         assert!(cpu.status.negative());
     }
@@ -250,7 +250,7 @@ mod tests {
         let mut cpu = setup_cpu_for_store();
         cpu.index_x = 0x42;
         execute_stx(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), 0x42);
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), 0x42);
         assert!(!cpu.status.zero());
         assert!(!cpu.status.negative());
 
@@ -259,7 +259,7 @@ mod tests {
         cpu.index_x = test_val;
         cpu.address_bus.set_pc(NEXT_PC).unwrap();
         execute_stx(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), test_val);
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), test_val);
         assert!(!cpu.status.zero());
         assert!(cpu.status.negative());
     }
@@ -269,7 +269,7 @@ mod tests {
         let mut cpu = setup_cpu_for_store();
         cpu.index_y = 0x42;
         execute_sty(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), 0x42);
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), 0x42);
         assert!(!cpu.status.zero());
         assert!(!cpu.status.negative());
 
@@ -278,7 +278,7 @@ mod tests {
         cpu.index_y = test_val;
         cpu.address_bus.set_pc(NEXT_PC).unwrap();
         execute_sty(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.address_bus.read(ZERO_PAGE_ADDR).unwrap(), test_val);
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), test_val);
         assert!(!cpu.status.zero());
         assert!(cpu.status.negative());
     }
@@ -321,13 +321,14 @@ mod tests {
     }
 
     #[test]
-    fn test_tsx() {
+    fn test_tsx() -> Result<(), CpuError> {
         let mut cpu = create_cpu();
-        cpu.stack_pointer = 0x0142;
+        cpu.stack.set_sp(0x0142)?;
         execute_tsx(AddressingMode::Implied, &mut cpu).unwrap();
         assert_eq!(cpu.index_x, 0x42);
         assert!(!cpu.status.zero());
         assert!(!cpu.status.negative());
+        Ok(())
     }
 
     #[test]
@@ -341,13 +342,14 @@ mod tests {
     }
 
     #[test]
-    fn test_txs() {
+    fn test_txs() -> Result<(), CpuError> {
         let mut cpu = create_cpu();
         cpu.index_x = 0x42;
         execute_txs(AddressingMode::Implied, &mut cpu).unwrap();
-        assert_eq!(cpu.stack_pointer, 0x0142); // stack pointer has fixed 0x01 high byte
+        assert_eq!(cpu.stack.get_sp()?, 0x0142); // stack pointer has fixed 0x01 high byte
         assert!(!cpu.status.zero());
         assert!(!cpu.status.negative());
+        Ok(())
     }
 
     #[test]
