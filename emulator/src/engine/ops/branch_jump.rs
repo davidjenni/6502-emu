@@ -1,3 +1,4 @@
+use crate::address_bus::AddressBus;
 use crate::cpu::{AddressingMode, Cpu};
 use crate::CpuError;
 
@@ -104,7 +105,8 @@ pub fn execute_jmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{status_register::StatusRegister, RamMemory};
+    use crate::memory_access::MemoryAccess;
+    use crate::status_register::StatusRegister;
 
     #[test]
     fn bcc() -> Result<(), CpuError> {
@@ -170,7 +172,7 @@ mod tests {
 
         // indirect jump:
         let mut cpu = create_cpu_jump(0x5432)?;
-        cpu.address_bus.write_word(0x5432, 0x3344)?;
+        cpu.memory.write_word(0x5432, 0x3344)?;
         execute_jmp(AddressingMode::Indirect, &mut cpu)?;
         assert_eq!(cpu.address_bus.get_pc(), 0x3344);
         Ok(())
@@ -179,16 +181,16 @@ mod tests {
     const NEXT_PC: u16 = 0x0123;
 
     fn create_cpu_branch_test(relative_offset: u8) -> Result<Cpu, CpuError> {
-        let mut cpu = Cpu::new(Box::default() as Box<RamMemory>);
-        cpu.address_bus.write(NEXT_PC, relative_offset).unwrap();
+        let mut cpu = Cpu::default();
+        cpu.memory.write(NEXT_PC, relative_offset).unwrap();
         cpu.address_bus.set_pc(NEXT_PC).unwrap();
         Ok(cpu)
     }
 
     fn create_cpu_jump(address: u16) -> Result<Cpu, CpuError> {
-        let mut cpu = Cpu::new(Box::default() as Box<RamMemory>);
+        let mut cpu = Cpu::default();
         // JMP has 2 byte operand, moving PC 1 byte further:
-        cpu.address_bus.write_word(NEXT_PC, address)?;
+        cpu.memory.write_word(NEXT_PC, address)?;
         cpu.address_bus.set_pc(NEXT_PC)?;
         Ok(cpu)
     }

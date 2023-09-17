@@ -1,138 +1,135 @@
-use crate::memory::Memory;
+use crate::memory_access::MemoryAccess;
 use crate::CpuError;
 
-pub struct AddressBus {
-    memory: Box<dyn Memory>,
+pub trait AddressBus {
+    fn fetch_byte_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u8, CpuError>;
+    fn fetch_word_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u16, CpuError>;
+    fn set_pc(&mut self, address: u16) -> Result<(), CpuError>;
+    fn get_pc(&self) -> u16;
+    fn load_program(
+        &mut self,
+        mem: &mut dyn MemoryAccess,
+        start_addr: u16,
+        program: &[u8],
+    ) -> Result<(), CpuError>;
+}
+
+#[derive(Clone)]
+pub struct AddressBusImpl {
     pc: u16,
 }
 
-impl AddressBus {
-    pub fn new(memory: Box<dyn Memory>) -> AddressBus {
-        AddressBus { memory, pc: 0 }
+impl AddressBusImpl {
+    pub fn new() -> AddressBusImpl {
+        AddressBusImpl { pc: 0 }
     }
+}
 
-    pub fn fetch_byte_at_pc(&mut self) -> Result<u8, CpuError> {
-        let op = self.memory.read(self.pc)?;
+impl AddressBus for AddressBusImpl {
+    fn fetch_byte_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u8, CpuError> {
+        if mem.get_size() <= self.pc as usize {
+            return Err(CpuError::InvalidAddress);
+        }
+        let op = mem.read(self.pc)?;
         self.pc += 1;
         Ok(op)
     }
 
-    pub fn fetch_word_at_pc(&mut self) -> Result<u16, CpuError> {
+    fn fetch_word_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u16, CpuError> {
         // little endian, so low byte is read first:
-        let lo = self.fetch_byte_at_pc()? as u16;
-        let hi = self.fetch_byte_at_pc()? as u16;
+        let lo = self.fetch_byte_at_pc(mem)? as u16;
+        let hi = self.fetch_byte_at_pc(mem)? as u16;
         Ok((hi << 8) | lo)
     }
 
-    pub fn set_pc(&mut self, address: u16) -> Result<(), CpuError> {
-        if (address as usize) >= self.memory.get_size() {
-            return Err(CpuError::InvalidAddress);
-        }
+    fn set_pc(&mut self, address: u16) -> Result<(), CpuError> {
         self.pc = address;
         Ok(())
     }
 
-    pub fn get_pc(&self) -> u16 {
+    fn get_pc(&self) -> u16 {
         self.pc
     }
 
-    pub fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
-        self.memory.load_program(start_addr, program)?;
-        Ok(())
-    }
-
-    pub fn read(&self, address: u16) -> Result<u8, CpuError> {
-        self.memory.read(address)
-    }
-
-    pub fn read_word(&self, address: u16) -> Result<u16, CpuError> {
-        // little endian, so low byte is read first:
-        let lo = self.read(address)? as u16;
-        let hi = self.read(address + 1)? as u16;
-        Ok((hi << 8) | lo)
-    }
-
-    pub fn read_zero_page_word(&self, zero_page_addr: u8) -> Result<u16, CpuError> {
-        let lo = self.read(zero_page_addr as u16)? as u16;
-        let hi = self.read(zero_page_addr.wrapping_add(1) as u16)? as u16;
-        Ok((hi << 8) | lo)
-    }
-
-    pub fn write(&mut self, address: u16, value: u8) -> Result<(), CpuError> {
-        self.memory.write(address, value)
-    }
-
-    pub fn write_word(&mut self, address: u16, value: u16) -> Result<(), CpuError> {
-        // self.memory.write(address, (value & 0xFF) as u8)?;
-        self.memory.write(address, value as u8)?;
-        self.memory.write(address + 1, (value >> 8) as u8)?;
+    fn load_program(
+        &mut self,
+        mem: &mut dyn MemoryAccess,
+        start_addr: u16,
+        program: &[u8],
+    ) -> Result<(), CpuError> {
+        mem.load_program(start_addr, program)?;
         Ok(())
     }
 }
-
-impl std::fmt::Debug for AddressBus {
+impl std::fmt::Debug for dyn AddressBus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "AddressBus {{ pc: 0x{:04X}, size: {} }}",
-            self.pc,
-            self.memory.get_size()
-        )
+        write!(f, "AddressBus {{ pc: 0x{:04X} }}", self.get_pc(),)
+    }
+}
+
+impl std::fmt::Debug for AddressBusImpl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AddressBus {{ pc: 0x{:04X} }}", self.pc,)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::RamMemory;
+    use mockall::predicate::*;
+    use mockall::*;
 
+    mock! {
+        pub _MemoryAccess {}
+        impl MemoryAccess for _MemoryAccess {
+            fn read(&self, address: u16) -> Result<u8, CpuError>;
+            fn read_word(&self, address: u16) -> Result<u16, CpuError>;
+            fn read_zero_page_word(&self, address: u8) -> Result<u16, CpuError>;
+            fn write(&mut self, address: u16, value: u8) -> Result<(), CpuError>;
+            fn write_word(&mut self, address: u16, value: u16) -> Result<(), CpuError>;
+            fn get_size(&self) -> usize;
+            fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
+            fn write_zero_page_word(&mut self, address: u8, value: u16) -> Result<(), CpuError>;
+        }
+    }
     #[test]
     fn can_fetch_next_op() -> Result<(), CpuError> {
-        let mut memory: Box<RamMemory> = Box::default();
-        memory.write(0x0000, 0x01)?;
-        let mut bus = AddressBus::new(memory);
+        let mut bus = AddressBusImpl::new();
+        let mut mem = Mock_MemoryAccess::new();
+        mem.expect_read().returning(|_| Ok(42));
+        mem.expect_get_size().returning(|| 0x80);
 
-        assert_eq!(bus.fetch_byte_at_pc()?, 0x01);
+        assert_eq!(bus.fetch_byte_at_pc(&mut mem)?, 42);
         assert_eq!(bus.get_pc(), 0x0001);
         Ok(())
     }
 
     #[test]
     fn has_debug_fmt() {
-        let memory: Box<RamMemory> = Box::default();
-        let bus = AddressBus::new(memory);
+        let bus = AddressBusImpl::new();
 
         let debug_msg = format!("{:?}", bus);
-        assert_eq!(debug_msg, "AddressBus { pc: 0x0000, size: 65536 }");
+        assert_eq!(debug_msg, "AddressBus { pc: 0x0000 }");
     }
 
     #[test]
-    #[should_panic(expected = "with overflow")]
-    fn fetch_next_op_panics_on_invalid_address() {
-        let memory: Box<RamMemory> = Box::default();
-        let mut bus = AddressBus::new(memory);
+    fn fetch_next_op_panics_on_invalid_address() -> Result<(), CpuError> {
+        let mut bus = AddressBusImpl::new();
+        let mut mem = Mock_MemoryAccess::new();
+        mem.expect_read().returning(|_| Ok(42));
+        mem.expect_get_size().returning(|| 0x80);
 
-        let top_address = bus.memory.get_size() as u16;
+        let top_address = mem.get_size() as u16;
         bus.set_pc(top_address - 1).unwrap();
         // first fetch will succeed, but moves pc to 0x0100
-        bus.fetch_byte_at_pc().unwrap();
+        bus.fetch_byte_at_pc(&mut mem).unwrap();
         assert_eq!(bus.get_pc(), top_address);
 
         // this fetch should panic
-        bus.fetch_byte_at_pc().unwrap();
-    }
-
-    #[test]
-    fn load_program() -> Result<(), CpuError> {
-        let memory: Box<RamMemory> = Box::new(RamMemory::new(1024));
-        let mut bus = AddressBus::new(memory);
-
-        let program = [0x01, 0x02, 0x03];
-        bus.load_program(0x00FE, &program)?;
-
-        assert_eq!(bus.memory.read(0x00FE)?, 0x01);
-        assert_eq!(bus.memory.read(0x00FF)?, 0x02);
-        assert_eq!(bus.memory.read(0x0100)?, 0x03);
+        assert_eq!(
+            bus.fetch_byte_at_pc(&mut mem),
+            Err(CpuError::InvalidAddress)
+        );
         Ok(())
     }
 }

@@ -3,6 +3,7 @@ use crate::CpuError;
 
 pub trait StackPointer {
     fn get_sp(&self) -> Result<u16, CpuError>;
+    fn set_sp(&mut self, value: u16) -> Result<(), CpuError>;
     fn push_byte(&mut self, mem: &mut dyn MemoryAccess, value: u8) -> Result<(), CpuError>;
     fn pop_byte(&mut self, mem: &dyn MemoryAccess) -> Result<u8, CpuError>;
     fn push_word(&mut self, mem: &mut dyn MemoryAccess, value: u16) -> Result<(), CpuError>;
@@ -25,10 +26,17 @@ impl StackPointerImpl {
     }
 }
 
-#[allow(unused_variables)] // TODO remove
 impl StackPointer for StackPointerImpl {
     fn get_sp(&self) -> Result<u16, CpuError> {
         Ok(0x0100 | self.sp as u16)
+    }
+
+    fn set_sp(&mut self, value: u16) -> Result<(), CpuError> {
+        if !(0x0100..=0x01FF).contains(&value) {
+            return Err(CpuError::InvalidAddress);
+        }
+        self.sp = (value & 0xFF) as u8;
+        Ok(())
     }
 
     fn push_byte(&mut self, mem: &mut dyn MemoryAccess, value: u8) -> Result<(), CpuError> {
@@ -104,10 +112,12 @@ mod tests {
         impl MemoryAccess for _MemoryAccess {
             fn read(&self, address: u16) -> Result<u8, CpuError>;
             fn read_word(&self, address: u16) -> Result<u16, CpuError>;
+            fn read_zero_page_word(&self, address: u8) -> Result<u16, CpuError>;
             fn write(&mut self, address: u16, value: u8) -> Result<(), CpuError>;
             fn write_word(&mut self, address: u16, value: u16) -> Result<(), CpuError>;
             fn get_size(&self) -> usize;
             fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
+            fn write_zero_page_word(&mut self, address: u8, value: u16) -> Result<(), CpuError>;
         }
     }
 
@@ -163,6 +173,14 @@ mod tests {
     fn get_sp() -> Result<(), CpuError> {
         let sp = StackPointerImpl::new();
         assert_eq!(0x01FF, sp.get_sp()?);
+        Ok(())
+    }
+
+    #[test]
+    fn set_sp() -> Result<(), CpuError> {
+        let mut sp = StackPointerImpl::new();
+        sp.set_sp(0x0142)?;
+        assert_eq!(0x0142, sp.get_sp()?);
         Ok(())
     }
 

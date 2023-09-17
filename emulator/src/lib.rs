@@ -1,11 +1,8 @@
 use crate::cpu::Cpu;
-use crate::memory::RamMemory;
 
-pub mod address_bus;
-mod address_bus2;
+mod address_bus;
 mod cpu;
 mod engine;
-mod memory;
 mod memory_access;
 mod stack_pointer;
 mod status_register;
@@ -44,6 +41,6 @@ pub enum CpuType {
 }
 pub fn create(kind: CpuType) -> Result<Box<dyn CpuController>, CpuError> {
     match kind {
-        CpuType::MOS6502 => Ok(Box::new(Cpu::new(Box::<RamMemory>::default()))),
+        CpuType::MOS6502 => Ok(Box::<Cpu>::default()),
     }
 }
