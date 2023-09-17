@@ -1,5 +1,6 @@
 use crate::address_bus::AddressBus;
 use crate::cpu::{AddressingMode, Cpu};
+use crate::stack_pointer::StackPointer;
 use crate::CpuError;
 
 // Branch operations:
@@ -102,6 +103,52 @@ pub fn execute_jmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     Ok(())
 }
 
+// JSR:    Jump to sub routine
+// push (PC + 2) to stack
+// (PC + 1) -> PCL
+// (PC + 2) -> PCH
+// status: n/c
+#[allow(dead_code)] // TODO remove
+pub fn execute_jsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    let effective_address = cpu.get_effective_address(mode)?;
+    let return_address = cpu.address_bus.get_pc() - 1;
+    // see 6502 programming manual, section 8,1 pg 106:
+    // "...PC address which points to the last byte of the JSR instruction onto the stack..."
+    cpu.address_bus.set_pc(effective_address)?;
+    cpu.stack.push_word(&mut cpu.memory, return_address)?;
+    Ok(())
+}
+
+// RTI:    Return from interrupt
+// pull PC, add 1, put result in PC
+// status: n/c
+#[allow(dead_code)] // TODO remove
+pub fn execute_rti(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    let status = cpu.stack.pop_byte(&cpu.memory)?;
+    let pc = cpu.stack.pop_word(&cpu.memory)?;
+    cpu.status.set_status(status & 0xCF); // ignore Break and undefined flags
+    cpu.address_bus.set_pc(pc)?;
+    Ok(())
+}
+
+// RTS:    Return from sub routine
+// pull PC, add 1, put result in PC
+// status: n/c
+#[allow(dead_code)] // TODO remove
+pub fn execute_rts(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    let pc = cpu.stack.pop_word(&cpu.memory)?;
+    // see comment in execute_jsr:
+    // now move the popped return address past the last byte of the JSR triple byte instruction
+    cpu.address_bus.set_pc(pc + 1)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,12 +225,51 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn jsr() -> Result<(), CpuError> {
+        let mut cpu = create_cpu_jump(0x5432)?;
+        execute_jsr(AddressingMode::Absolute, &mut cpu)?;
+        assert_eq!(cpu.address_bus.get_pc(), 0x5432);
+        // JSR pushes address of last byte of 3 byte instruction to stack:
+        assert_eq!(cpu.stack.pop_word(&cpu.memory)?, 0x0124);
+        Ok(())
+    }
+
+    #[test]
+    fn rti() -> Result<(), CpuError> {
+        let mut cpu = Cpu::default();
+        cpu.stack.push_word(&mut cpu.memory, 0x1234)?;
+        const EXPECTED_STATUS: u8 = 0b1101_1011;
+        cpu.stack.push_byte(&mut cpu.memory, EXPECTED_STATUS)?;
+
+        execute_rti(AddressingMode::Implied, &mut cpu)?;
+
+        assert_eq!(cpu.address_bus.get_pc(), 0x1234);
+        assert!(cpu.status.negative());
+        assert!(cpu.status.overflow());
+        assert!(!cpu.status.break_command()); // bit4, break, is cleared by RTI
+        assert!(cpu.status.decimal_mode());
+        assert!(cpu.status.zero());
+        assert!(cpu.status.carry());
+        Ok(())
+    }
+
+    #[test]
+    fn rts() -> Result<(), CpuError> {
+        let mut cpu = Cpu::default();
+        cpu.stack.push_word(&mut cpu.memory, 0x1234)?;
+        execute_rts(AddressingMode::Implied, &mut cpu)?;
+        // see execute_jsr: pushed PC is one byte short of the actual return address
+        assert_eq!(cpu.address_bus.get_pc(), 0x1235);
+        Ok(())
+    }
+
     const NEXT_PC: u16 = 0x0123;
 
     fn create_cpu_branch_test(relative_offset: u8) -> Result<Cpu, CpuError> {
         let mut cpu = Cpu::default();
         cpu.memory.write(NEXT_PC, relative_offset).unwrap();
-        cpu.address_bus.set_pc(NEXT_PC).unwrap();
+        cpu.address_bus.set_pc(NEXT_PC)?;
         Ok(cpu)
     }
 
