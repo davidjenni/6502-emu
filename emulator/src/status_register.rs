@@ -32,6 +32,10 @@ impl StatusRegister {
     pub fn get_status(&self) -> u8 {
         self.0
     }
+
+    pub fn set_status(&mut self, value: u8) {
+        self.0 = value;
+    }
 }
 
 impl fmt::Display for StatusRegister {
