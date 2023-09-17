@@ -50,7 +50,6 @@ impl CpuController for Cpu {
     }
 
     fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError> {
-        self.stack.push_word(&mut self.memory, 12)?; // TODO remove
         self.address_bus.set_pc(0x0300)?;
         if start_addr.is_some() {
             self.address_bus.set_pc(start_addr.unwrap())?;
@@ -76,8 +75,7 @@ impl CpuController for Cpu {
 
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
         self.program_loaded = true;
-        self.address_bus
-            .load_program(&mut self.memory, start_addr, program)
+        self.memory.load_program(start_addr, program)
     }
 
     fn get_register_snapshot(&self) -> crate::CpuRegisterSnapshot {
