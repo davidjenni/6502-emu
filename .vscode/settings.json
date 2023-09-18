@@ -3,6 +3,7 @@
     "automock",
     "bitfield",
     "clippy",
+    "DIZC",
     "LLDB",
     "mockall",
     "MSBASIC",
