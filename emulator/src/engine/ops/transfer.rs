@@ -65,7 +65,6 @@ pub fn execute_sty(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TAX:    A -> X
 // status: N. ...Z.
-#[allow(dead_code)] // TODO remove
 pub fn execute_tax(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
@@ -77,7 +76,6 @@ pub fn execute_tax(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TAY:    A -> Y
 // status: N. ...Z.
-#[allow(dead_code)] // TODO remove
 pub fn execute_tay(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
@@ -89,7 +87,6 @@ pub fn execute_tay(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TXA:    X -> A
 // status: N. ...Z.
-#[allow(dead_code)] // TODO remove
 pub fn execute_txa(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
@@ -101,7 +98,6 @@ pub fn execute_txa(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TYA:    Y -> A
 // status: N. ...Z.
-#[allow(dead_code)] // TODO remove
 pub fn execute_tya(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);

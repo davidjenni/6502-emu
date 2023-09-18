@@ -29,7 +29,6 @@ pub fn execute_brk(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // RTI:    Return from interrupt
 // pull PC, add 1, put result in PC
 // status: NV bD.ZC
-#[allow(dead_code)] // TODO remove
 pub fn execute_rti(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);

@@ -7,7 +7,6 @@ use crate::CpuError;
 
 // BCC:    Branch on Carry clear (C = 0)
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_bcc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if !cpu.status.carry() {
@@ -18,7 +17,6 @@ pub fn execute_bcc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BCS:    Branch on Carry set (C = 1)
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_bcs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if cpu.status.carry() {
@@ -49,7 +47,6 @@ pub fn execute_bmi(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BNE:    Branch on result non zero (Z = 0)
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_bne(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if !cpu.status.zero() {
@@ -60,7 +57,6 @@ pub fn execute_bne(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BPL:    Branch on result plus (N = 0)
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_bpl(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if !cpu.status.negative() {
@@ -71,7 +67,6 @@ pub fn execute_bpl(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BVC:    Branch on Overflow clear (V = 1)
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_bvc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if !cpu.status.overflow() {
@@ -82,7 +77,6 @@ pub fn execute_bvc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BVS:    Branch on Overflow set (V = 1)
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_bvs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if cpu.status.overflow() {
@@ -108,7 +102,6 @@ pub fn execute_jmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // (PC + 1) -> PCL
 // (PC + 2) -> PCH
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_jsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let return_address = cpu.address_bus.get_pc() - 1;
@@ -122,7 +115,6 @@ pub fn execute_jsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // RTS:    Return from sub routine
 // pull PC, add 1, put result in PC
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_rts(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);

@@ -12,7 +12,6 @@ use crate::CpuError;
 use crate::CpuRegisterSnapshot;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-#[allow(dead_code)] // TODO remove
 pub enum AddressingMode {
     Implied,          // CLC
     Accumulator,      // ASL A

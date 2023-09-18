@@ -5,7 +5,6 @@ use crate::CpuError;
 // PHA: Push accumulator
 //  A -> SP
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_pha(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
@@ -17,7 +16,6 @@ pub fn execute_pha(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // PHP: Push status register
 //  S -> SP
 // status: n/c
-#[allow(dead_code)] // TODO remove
 pub fn execute_php(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
@@ -30,7 +28,6 @@ pub fn execute_php(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // PLA: Pull accumulator
 //  SP -> A
 // status: N. ...Z.
-#[allow(dead_code)] // TODO remove
 pub fn execute_pla(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
@@ -43,7 +40,6 @@ pub fn execute_pla(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // PLP: Pull status register
 //  SP -> P
 // status: NV .DIZC
-#[allow(dead_code)] // TODO remove
 pub fn execute_plp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
@@ -55,7 +51,6 @@ pub fn execute_plp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TSX:    SP -> X
 // status: N. ...Z.
-#[allow(dead_code)] // TODO remove
 pub fn execute_tsx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
@@ -67,7 +62,6 @@ pub fn execute_tsx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TXS:    X -> SP
 // status: N. ...Z.
-#[allow(dead_code)] // TODO remove
 pub fn execute_txs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
