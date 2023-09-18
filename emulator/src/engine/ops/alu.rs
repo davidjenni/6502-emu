@@ -149,6 +149,78 @@ pub fn execute_ror(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     Ok(())
 }
 
+// Increment/decrement operations:
+
+// DEC: Decrement memory by one
+// M - 1 -> M
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_dec(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    read_modify_write(mode, cpu, |operand, _| (operand.wrapping_sub(1), false))?;
+    Ok(())
+}
+
+// DEX: Decrement index X by one
+// X - 1 -> X
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_dex(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.index_x = cpu.index_x.wrapping_sub(1);
+    cpu.status.update_from(cpu.index_x);
+    Ok(())
+}
+
+// DEY: Decrement index Y by one
+// Y - 1 -> Y
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_dey(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.index_y = cpu.index_y.wrapping_sub(1);
+    cpu.status.update_from(cpu.index_y);
+    Ok(())
+}
+
+// INC: Increment memory by one
+// M + 1 -> M
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_inc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    read_modify_write(mode, cpu, |operand, _| (operand.wrapping_add(1), false))?;
+    Ok(())
+}
+
+// INX: Increment index X by one
+// X + 1 -> X
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_inx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.index_x = cpu.index_x.wrapping_add(1);
+    cpu.status.update_from(cpu.index_x);
+    Ok(())
+}
+
+// INY: Increment index Y by one
+// Y + 1 -> Y
+// status: N. ...Z.
+#[allow(dead_code)] // TODO remove
+pub fn execute_iny(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+    if mode != AddressingMode::Implied {
+        return Err(CpuError::InvalidAddressingMode);
+    }
+    cpu.index_y = cpu.index_y.wrapping_add(1);
+    cpu.status.update_from(cpu.index_y);
+    Ok(())
+}
+
 // function to handle the divergent accumulator vs in-memory read prolog and write sequel
 fn read_modify_write(
     mode: AddressingMode,
@@ -186,192 +258,199 @@ mod tests {
     const NEXT_PC: u16 = 0x0200;
 
     // create a Cpu instance and write operand value into zero page address $00
-    fn setup_cpu(operand: u8, carry: bool) -> Cpu {
-        let mut cpu = create_cpu();
-        cpu.memory.write(0x0000, operand).unwrap();
+    fn setup_cpu(operand: u8, carry: bool) -> Result<Cpu, CpuError> {
+        let mut cpu = create_cpu()?;
+        cpu.memory.write(0x0000, operand)?;
         // idiosyncrasy of 6502:
         // for first byte, carry flag must be cleared for ADC, set for SBC
         cpu.status.set_carry(carry);
-        cpu
+        Ok(cpu)
     }
 
-    fn setup_cpu_zero_page(operand: u8) -> Cpu {
-        let mut cpu = create_cpu();
-        cpu.memory.write(ZERO_PAGE_ADDR, operand).unwrap();
-        cpu.memory.write(NEXT_PC, ZERO_PAGE_ADDR as u8).unwrap();
-        cpu.address_bus.set_pc(NEXT_PC).unwrap();
-        cpu
+    fn setup_cpu_zero_page(operand: u8) -> Result<Cpu, CpuError> {
+        let mut cpu = create_cpu()?;
+        cpu.memory.write(ZERO_PAGE_ADDR, operand)?;
+        cpu.memory.write(NEXT_PC, ZERO_PAGE_ADDR as u8)?;
+        cpu.address_bus.set_pc(NEXT_PC)?;
+        Ok(cpu)
     }
 
-    fn create_cpu() -> Cpu {
+    fn create_cpu() -> Result<Cpu, CpuError> {
         let mut cpu = Cpu::default();
-        cpu.address_bus.set_pc(0x0000).unwrap();
-        cpu
+        cpu.address_bus.set_pc(0x0000)?;
+        Ok(cpu)
     }
 
     #[test]
-    fn add_with_carry() {
+    fn add_with_carry() -> Result<(), CpuError> {
         // calculate result, no overflow: 211 + 14 = 225
-        let mut cpu = setup_cpu(211, false);
+        let mut cpu = setup_cpu(211, false)?;
         cpu.accumulator = 14;
-        execute_adc(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_adc(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 225);
         assert!(!cpu.status.carry()); // carry not set
         assert!(!cpu.status.overflow()); // no overflow
         assert!(cpu.status.negative()); // negative result
 
         // calculate result, with carry but no overflow: 222 + 42 = 264
-        let mut cpu = setup_cpu(222, false);
+        let mut cpu = setup_cpu(222, false)?;
         cpu.accumulator = 42;
-        execute_adc(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_adc(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 8); // result has wrap around
         assert!(cpu.status.carry()); // carry set
         assert!(!cpu.status.overflow()); // no overflow
         assert!(!cpu.status.negative()); // positive result
 
         // calculate result, no carry but with overflow: 127 + 2 = unsigned 129 = signed -127
-        let mut cpu = setup_cpu(2, false);
+        let mut cpu = setup_cpu(2, false)?;
         cpu.accumulator = 127;
-        execute_adc(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_adc(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0x81); // == -127
         assert!(!cpu.status.carry()); // no carry set
         assert!(cpu.status.overflow()); // overflow !!!
         assert!(cpu.status.negative()); // negative result
+        Ok(())
     }
 
     #[test]
-    fn subtract_with_carry() {
+    fn subtract_with_carry() -> Result<(), CpuError> {
         // calculate positive result: 56 - 14 = 42
-        let mut cpu = setup_cpu(14, true);
+        let mut cpu = setup_cpu(14, true)?;
         cpu.accumulator = 56;
-        execute_sbc(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_sbc(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 42);
         assert!(cpu.status.carry()); //     carry still set
         assert!(!cpu.status.overflow()); // no overflow
         assert!(!cpu.status.negative()); // positive result
 
         // calculate negative result: 4 - 9 = -5
-        let mut cpu = setup_cpu(9, true);
+        let mut cpu = setup_cpu(9, true)?;
         cpu.accumulator = 4;
-        execute_sbc(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_sbc(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0xFB); // -5
         assert!(!cpu.status.carry()); //   carry cleared -> borrow
         assert!(cpu.status.overflow()); // overflow !!
         assert!(cpu.status.negative()); // negative result
 
         // calculate result with overflow
-        let mut cpu = setup_cpu(150, true);
+        let mut cpu = setup_cpu(150, true)?;
         cpu.accumulator = 2;
-        execute_sbc(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_sbc(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 108); // wrapped around result
         assert!(!cpu.status.carry()); //    carry set
         assert!(!cpu.status.overflow()); // no overflow
         assert!(!cpu.status.negative()); // positive result
+        Ok(())
     }
 
     #[test]
-    fn and() {
-        let mut cpu = setup_cpu(0b1010_1010, false);
+    fn and() -> Result<(), CpuError> {
+        let mut cpu = setup_cpu(0b1010_1010, false)?;
         cpu.accumulator = 0b1111_0000;
-        execute_and(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_and(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b1010_0000);
         assert!(cpu.status.negative());
         assert!(!cpu.status.zero());
 
-        let mut cpu = setup_cpu(0b1010_1010, false);
+        let mut cpu = setup_cpu(0b1010_1010, false)?;
         cpu.accumulator = 0b0000_0000;
-        execute_and(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_and(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0000_0000);
         assert!(!cpu.status.negative());
         assert!(cpu.status.zero());
+        Ok(())
     }
 
     #[test]
-    fn eor() {
-        let mut cpu = setup_cpu(0b1010_1010, false);
+    fn eor() -> Result<(), CpuError> {
+        let mut cpu = setup_cpu(0b1010_1010, false)?;
         cpu.accumulator = 0b1111_0000;
-        execute_eor(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_eor(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0101_1010);
         assert!(!cpu.status.negative());
         assert!(!cpu.status.zero());
 
-        let mut cpu = setup_cpu(0b1010_1010, false);
+        let mut cpu = setup_cpu(0b1010_1010, false)?;
         cpu.accumulator = 0b1010_1010;
-        execute_eor(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_eor(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0000_0000);
         assert!(!cpu.status.negative());
         assert!(cpu.status.zero());
+        Ok(())
     }
 
     #[test]
-    fn ora() {
-        let mut cpu = setup_cpu(0b1010_1010, false);
+    fn ora() -> Result<(), CpuError> {
+        let mut cpu = setup_cpu(0b1010_1010, false)?;
         cpu.accumulator = 0b1111_0000;
-        execute_ora(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_ora(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b1111_1010);
         assert!(cpu.status.negative());
         assert!(!cpu.status.zero());
 
-        let mut cpu = setup_cpu(0b1010_1010, false);
+        let mut cpu = setup_cpu(0b1010_1010, false)?;
         cpu.accumulator = 0b0000_0000;
-        execute_ora(AddressingMode::Immediate, &mut cpu).unwrap();
+        execute_ora(AddressingMode::Immediate, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b1010_1010);
         assert!(cpu.status.negative());
         assert!(!cpu.status.zero());
+        Ok(())
     }
 
     #[test]
-    fn asl() {
-        let mut cpu = create_cpu();
+    fn asl() -> Result<(), CpuError> {
+        let mut cpu = create_cpu()?;
         cpu.accumulator = 0b1010_1010;
-        execute_asl(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_asl(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0101_0100);
         assert!(!cpu.status.negative());
         assert!(!cpu.status.zero());
         assert!(cpu.status.carry());
 
         cpu.accumulator = 0b0101_0100;
-        execute_asl(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_asl(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b1010_1000);
         assert!(!cpu.status.carry());
 
-        let mut cpu = setup_cpu_zero_page(0b1010_1010);
-        execute_asl(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), 0b0101_0100);
+        let mut cpu = setup_cpu_zero_page(0b1010_1010)?;
+        execute_asl(AddressingMode::ZeroPage, &mut cpu)?;
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR)?, 0b0101_0100);
         assert!(!cpu.status.negative());
         assert!(!cpu.status.zero());
         assert!(cpu.status.carry());
+        Ok(())
     }
 
     #[test]
-    fn lsr() {
-        let mut cpu = create_cpu();
+    fn lsr() -> Result<(), CpuError> {
+        let mut cpu = create_cpu()?;
         cpu.accumulator = 0b1010_1010;
-        execute_lsr(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_lsr(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0101_0101);
         assert!(!cpu.status.negative());
         assert!(!cpu.status.zero());
         assert!(!cpu.status.carry());
 
         cpu.accumulator = 0b0101_0101;
-        execute_lsr(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_lsr(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0010_1010);
         assert!(cpu.status.carry());
 
-        let mut cpu = setup_cpu_zero_page(0b1010_1010);
-        execute_lsr(AddressingMode::ZeroPage, &mut cpu).unwrap();
-        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR).unwrap(), 0b0101_0101);
+        let mut cpu = setup_cpu_zero_page(0b1010_1010)?;
+        execute_lsr(AddressingMode::ZeroPage, &mut cpu)?;
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR)?, 0b0101_0101);
         assert!(!cpu.status.negative());
         assert!(!cpu.status.zero());
         assert!(!cpu.status.carry());
+        Ok(())
     }
 
     #[test]
-    fn rol() {
-        let mut cpu = create_cpu();
+    fn rol() -> Result<(), CpuError> {
+        let mut cpu = create_cpu()?;
         cpu.accumulator = 0b1010_1010;
         cpu.status.set_carry(true);
-        execute_rol(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_rol(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0101_0101);
         assert!(!cpu.status.negative());
         assert!(!cpu.status.zero());
@@ -379,23 +458,24 @@ mod tests {
 
         cpu.accumulator = 0b1010_1010;
         cpu.status.set_carry(false);
-        execute_rol(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_rol(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0101_0100);
         assert!(cpu.status.carry());
 
         cpu.accumulator = 0b0101_0101;
         cpu.status.set_carry(false);
-        execute_rol(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_rol(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b1010_1010);
         assert!(!cpu.status.carry());
+        Ok(())
     }
 
     #[test]
-    fn ror() {
-        let mut cpu = create_cpu();
+    fn ror() -> Result<(), CpuError> {
+        let mut cpu = create_cpu()?;
         cpu.accumulator = 0b1010_1010;
         cpu.status.set_carry(true);
-        execute_ror(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_ror(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b1101_0101);
         assert!(cpu.status.negative());
         assert!(!cpu.status.zero());
@@ -403,14 +483,139 @@ mod tests {
 
         cpu.accumulator = 0b1010_1010;
         cpu.status.set_carry(false);
-        execute_ror(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_ror(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0101_0101);
         assert!(!cpu.status.carry());
 
         cpu.accumulator = 0b0101_0101;
         cpu.status.set_carry(false);
-        execute_ror(AddressingMode::Accumulator, &mut cpu).unwrap();
+        execute_ror(AddressingMode::Accumulator, &mut cpu)?;
         assert_eq!(cpu.accumulator, 0b0010_1010);
         assert!(cpu.status.carry());
+        Ok(())
+    }
+
+    #[test]
+    fn inc() -> Result<(), CpuError> {
+        let mut cpu = setup_cpu_zero_page(0x42)?;
+        execute_inc(AddressingMode::ZeroPage, &mut cpu)?;
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR)?, 0x43);
+        assert!(!cpu.status.negative());
+        assert!(!cpu.status.zero());
+
+        let mut cpu = setup_cpu_zero_page(0xFF)?;
+        execute_inc(AddressingMode::ZeroPage, &mut cpu)?;
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR)?, 0x00);
+        assert!(!cpu.status.negative());
+        assert!(cpu.status.zero());
+        Ok(())
+    }
+
+    #[test]
+    fn inx() -> Result<(), CpuError> {
+        let mut cpu = create_cpu()?;
+        cpu.index_x = 0x42;
+        execute_inx(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_x, 0x43);
+        assert!(!cpu.status.negative());
+        assert!(!cpu.status.zero());
+
+        let mut cpu = create_cpu()?;
+        cpu.index_x = 0xFF;
+        execute_inx(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_x, 0x00);
+        assert!(!cpu.status.negative());
+        assert!(cpu.status.zero());
+        Ok(())
+    }
+
+    #[test]
+    fn iny() -> Result<(), CpuError> {
+        let mut cpu = create_cpu()?;
+        cpu.index_y = 0x42;
+        execute_iny(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_y, 0x43);
+        assert!(!cpu.status.negative());
+        assert!(!cpu.status.zero());
+
+        let mut cpu = create_cpu()?;
+        cpu.index_y = 0xFF;
+        execute_iny(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_y, 0x00);
+        assert!(!cpu.status.negative());
+        assert!(cpu.status.zero());
+        Ok(())
+    }
+
+    #[test]
+    fn dec() -> Result<(), CpuError> {
+        let mut cpu = setup_cpu_zero_page(0x42)?;
+        execute_dec(AddressingMode::ZeroPage, &mut cpu)?;
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR)?, 0x41);
+        assert!(!cpu.status.negative());
+        assert!(!cpu.status.zero());
+
+        let mut cpu = setup_cpu_zero_page(0x01)?;
+        execute_dec(AddressingMode::ZeroPage, &mut cpu)?;
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR)?, 0x00);
+        assert!(!cpu.status.negative());
+        assert!(cpu.status.zero());
+
+        let mut cpu = setup_cpu_zero_page(0x00)?;
+        execute_dec(AddressingMode::ZeroPage, &mut cpu)?;
+        assert_eq!(cpu.memory.read(ZERO_PAGE_ADDR)?, 0xFF);
+        assert!(cpu.status.negative());
+        assert!(!cpu.status.zero());
+        Ok(())
+    }
+
+    #[test]
+    fn dex() -> Result<(), CpuError> {
+        let mut cpu = create_cpu()?;
+        cpu.index_x = 0x42;
+        execute_dex(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_x, 0x41);
+        assert!(!cpu.status.negative());
+        assert!(!cpu.status.zero());
+
+        let mut cpu = create_cpu()?;
+        cpu.index_x = 0x01;
+        execute_dex(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_x, 0x00);
+        assert!(!cpu.status.negative());
+        assert!(cpu.status.zero());
+
+        let mut cpu = create_cpu()?;
+        cpu.index_x = 0x00;
+        execute_dex(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_x, 0xFF);
+        assert!(cpu.status.negative());
+        assert!(!cpu.status.zero());
+        Ok(())
+    }
+
+    #[test]
+    fn dey() -> Result<(), CpuError> {
+        let mut cpu = create_cpu()?;
+        cpu.index_y = 0x42;
+        execute_dey(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_y, 0x41);
+        assert!(!cpu.status.negative());
+        assert!(!cpu.status.zero());
+
+        let mut cpu = create_cpu()?;
+        cpu.index_y = 0x01;
+        execute_dey(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_y, 0x00);
+        assert!(!cpu.status.negative());
+        assert!(cpu.status.zero());
+
+        let mut cpu = create_cpu()?;
+        cpu.index_y = 0x00;
+        execute_dey(AddressingMode::Implied, &mut cpu)?;
+        assert_eq!(cpu.index_y, 0xFF);
+        assert!(cpu.status.negative());
+        assert!(!cpu.status.zero());
+        Ok(())
     }
 }
