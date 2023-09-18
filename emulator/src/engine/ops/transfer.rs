@@ -1,6 +1,5 @@
 use crate::cpu::{AddressingMode, Cpu};
 use crate::memory_access::MemoryAccess;
-use crate::stack_pointer::StackPointer;
 use crate::CpuError;
 
 // LDA/X/Y:
@@ -39,7 +38,7 @@ pub fn execute_ldy(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 pub fn execute_sta(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let val = cpu.accumulator;
-    cpu.memory.write(effective_address, val).unwrap();
+    cpu.memory.write(effective_address, val)?;
     cpu.status.update_from(val);
     Ok(())
 }
@@ -88,18 +87,6 @@ pub fn execute_tay(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     Ok(())
 }
 
-// TSX:    SP -> X
-// status: N. ...Z.
-#[allow(dead_code)] // TODO remove
-pub fn execute_tsx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
-    if mode != AddressingMode::Implied {
-        return Err(CpuError::InvalidAddressingMode);
-    }
-    cpu.index_x = cpu.stack.get_sp().unwrap() as u8; // stack pointer has fixed 0x01 high byte
-    cpu.status.update_from(cpu.index_x);
-    Ok(())
-}
-
 // TXA:    X -> A
 // status: N. ...Z.
 #[allow(dead_code)] // TODO remove
@@ -109,18 +96,6 @@ pub fn execute_txa(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     }
     cpu.accumulator = cpu.index_x;
     cpu.status.update_from(cpu.accumulator);
-    Ok(())
-}
-
-// TXS:    X -> SP
-// status: N. ...Z.
-#[allow(dead_code)] // TODO remove
-pub fn execute_txs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
-    if mode != AddressingMode::Implied {
-        return Err(CpuError::InvalidAddressingMode);
-    }
-    cpu.stack.set_sp(0x0100 | cpu.index_x as u16)?; // stack pointer has fixed 0x01 high byte
-    cpu.status.update_from(cpu.index_x);
     Ok(())
 }
 
@@ -321,17 +296,6 @@ mod tests {
     }
 
     #[test]
-    fn test_tsx() -> Result<(), CpuError> {
-        let mut cpu = create_cpu();
-        cpu.stack.set_sp(0x0142)?;
-        execute_tsx(AddressingMode::Implied, &mut cpu).unwrap();
-        assert_eq!(cpu.index_x, 0x42);
-        assert!(!cpu.status.zero());
-        assert!(!cpu.status.negative());
-        Ok(())
-    }
-
-    #[test]
     fn test_txa() {
         let mut cpu = create_cpu();
         cpu.index_x = 0x42;
@@ -339,17 +303,6 @@ mod tests {
         assert_eq!(cpu.accumulator, 0x42);
         assert!(!cpu.status.zero());
         assert!(!cpu.status.negative());
-    }
-
-    #[test]
-    fn test_txs() -> Result<(), CpuError> {
-        let mut cpu = create_cpu();
-        cpu.index_x = 0x42;
-        execute_txs(AddressingMode::Implied, &mut cpu).unwrap();
-        assert_eq!(cpu.stack.get_sp()?, 0x0142); // stack pointer has fixed 0x01 high byte
-        assert!(!cpu.status.zero());
-        assert!(!cpu.status.negative());
-        Ok(())
     }
 
     #[test]

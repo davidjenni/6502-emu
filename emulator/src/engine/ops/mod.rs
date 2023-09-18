@@ -2,6 +2,7 @@ pub mod alu;
 pub mod branch_jump;
 pub mod flag_compare;
 pub mod interrupt;
+pub mod stack;
 pub mod transfer;
 
 // good overview and reference to 6502 instruction opcodes:
