@@ -8,7 +8,6 @@ use crate::CpuError;
 // 0 -> C
 //         76543210
 // status: .. ....c
-#[allow(dead_code)] // TODO remove
 pub fn execute_clc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_carry(false);
@@ -19,7 +18,6 @@ pub fn execute_clc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 0 -> D
 //         76543210
 // status: .. .d...
-#[allow(dead_code)] // TODO remove
 pub fn execute_cld(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_decimal_mode(false);
@@ -30,7 +28,6 @@ pub fn execute_cld(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 0 -> I
 //         76543210
 // status: .. ..i..
-#[allow(dead_code)] // TODO remove
 pub fn execute_cli(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_interrupt_disable(false);
@@ -41,7 +38,6 @@ pub fn execute_cli(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 0 -> C
 //         76543210
 // status: .v .....
-#[allow(dead_code)] // TODO remove
 pub fn execute_clv(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_overflow(false);
@@ -64,7 +60,6 @@ pub fn execute_sec(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 1 -> D
 //         76543210
 // status: .. .D...
-#[allow(dead_code)] // TODO remove
 pub fn execute_sed(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_decimal_mode(true);
@@ -75,7 +70,6 @@ pub fn execute_sed(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 1 -> I
 //         76543210
 // status: .. ..I..
-#[allow(dead_code)] // TODO remove
 pub fn execute_sei(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_interrupt_disable(true);
@@ -95,7 +89,6 @@ fn validate_mode(mode: AddressingMode) -> Result<(), CpuError> {
 // A AND M, M7 -> N, M6 -> V
 //         76543210
 // status: NV ...Z.
-#[allow(dead_code)] // TODO remove
 pub fn execute_bit(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     let operand = cpu.get_effective_operand(mode)?;
     cpu.status.set_negative(operand & 0b1000_0000 != 0);
@@ -113,7 +106,6 @@ pub fn execute_bit(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // A - M -> C,Z,N
 //         76543210
 // status: N. ...ZC
-#[allow(dead_code)] // TODO remove
 pub fn execute_cmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     compare_register(cpu.accumulator, mode, cpu)?;
     Ok(())
@@ -123,7 +115,6 @@ pub fn execute_cmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // X - M -> C,Z,N
 //         76543210
 // status: N. ...ZC
-#[allow(dead_code)] // TODO remove
 pub fn execute_cpx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     compare_register(cpu.index_x, mode, cpu)?;
     Ok(())
@@ -133,7 +124,6 @@ pub fn execute_cpx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // X - M -> C,Z,N
 //         76543210
 // status: N. ...ZC
-#[allow(dead_code)] // TODO remove
 pub fn execute_cpy(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
     compare_register(cpu.index_y, mode, cpu)?;
     Ok(())
