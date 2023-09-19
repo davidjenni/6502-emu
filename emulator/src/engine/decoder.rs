@@ -16,9 +16,14 @@ pub struct DecodedInstruction {
     pub opcode: OpCode,
     pub mode: AddressingMode,
     pub execute: OpCodeExecute,
+    pub extra_bytes: u8,
+    pub cycles: u8,
 }
 
+#[rustfmt::skip]
 pub fn decode(opcode: u8) -> Result<DecodedInstruction, CpuError> {
     // lookup table is generated via ../build.rs from a CSV file:
+    // generated file somewhere at: target/debug/build/mos6502-emulator-<generatedId>/out/opcodes_mos6502.r
+    // see also compile output for actual path
     include!(concat!(env!("OUT_DIR"), "/opcodes_mos6502.rs"))
 }

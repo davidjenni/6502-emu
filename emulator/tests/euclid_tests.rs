@@ -29,7 +29,7 @@ fn run_gcd_euclid() -> Result<(), CpuError> {
     cpu.set_byte_at(0x0041, 49)?; // VAR_B
 
     let snapshot = cpu.run(Some(0x0200))?;
-    assert_eq!(snapshot.program_counter, 0x021C);
+    assert_eq!(snapshot.program_counter, 0xFFFE);
     // assert loop termination due to a == b:
     assert_eq!(cpu.get_byte_at(0x0040)?, cpu.get_byte_at(0x0041)?);
     // read back transferred byte from zero page:

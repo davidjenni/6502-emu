@@ -39,12 +39,18 @@ pub struct Cpu {
     pub memory: Box<dyn Memory>, // TODO: should be reverted back to private
     pub address_bus: Box<dyn AddressBus>, // TODO: should be reverted back to private
     pub stack: Box<dyn StackPointer>, // TODO: should be reverted back to private
+
+    // stats counters:
+    accumulated_cycles: u64,
+    accumulated_instructions: u64,
 }
 
 impl CpuController for Cpu {
     fn reset(&mut self) -> Result<(), CpuError> {
         self.stack.reset()?;
         self.address_bus.set_pc(SystemVector::Reset as u16)?;
+        self.accumulated_cycles = 0;
+        self.accumulated_instructions = 0;
         Ok(())
     }
 
@@ -72,6 +78,8 @@ impl CpuController for Cpu {
             stack_pointer: self.stack.get_sp().unwrap(),
             program_counter: self.address_bus.get_pc(),
             status: self.status.get_status(),
+            accumulated_cycles: self.accumulated_cycles,
+            accumulated_instructions: self.accumulated_instructions,
         }
     }
 
@@ -100,6 +108,8 @@ impl Cpu {
             memory: Box::<MemoryImpl>::default(),
             address_bus: Box::new(AddressBusImpl::new()),
             stack: Box::new(StackPointerImpl::new()),
+            accumulated_cycles: 0,
+            accumulated_instructions: 0,
         }
     }
 
@@ -110,7 +120,9 @@ impl Cpu {
             SystemVector::Reset as u16
         })?;
         loop {
-            let last_opcode = self.step()?;
+            let (last_opcode, cycles) = self.step()?;
+            self.accumulated_instructions += 1;
+            self.accumulated_cycles += cycles as u64;
             if last_opcode == OpCode::BRK {
                 break;
             }
@@ -118,10 +130,10 @@ impl Cpu {
         Ok(())
     }
 
-    pub fn step(&mut self) -> Result<OpCode, CpuError> {
+    pub fn step(&mut self) -> Result<(OpCode, u8), CpuError> {
         let decoded = self.fetch_and_decode()?;
         (decoded.execute)(decoded.mode, self)?;
-        Ok(decoded.opcode)
+        Ok((decoded.opcode, decoded.cycles))
     }
 
     fn fetch_and_decode(&mut self) -> Result<DecodedInstruction, CpuError> {

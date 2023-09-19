@@ -34,5 +34,9 @@ fn run_empty_program_stops_at_irq() -> Result<(), CpuError> {
     let reg_snapshot = cpu.run(None)?;
     // PC should point at IRQ vector:
     assert_eq!(reg_snapshot.program_counter, 0xFFFE);
+    // executed a single BRK since all memory is zeroed out:
+    assert_eq!(reg_snapshot.accumulated_instructions, 1);
+    // BRK takes 7 cycles:
+    assert_eq!(reg_snapshot.accumulated_cycles, 7);
     Ok(())
 }

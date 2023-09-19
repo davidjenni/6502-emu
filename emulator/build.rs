@@ -26,19 +26,24 @@ fn main() -> io::Result<()> {
             if cells[0] == *"opcode" {
                 continue;
             }
-            writeln!(out_file, "        {} => Ok(DecodedInstruction {{", cells[0])?;
-            writeln!(out_file, "            opcode: OpCode::{},", cells[1])?;
+
+            // opcode,mnemonic,addressing mode,bytes,cycles,flags
+            // 0x69,ADC,IMM,2,2,<flags>
+
+            let (hex_opcode, mnemonic, mode, bytes, cycles) =
+                (&cells[0], &cells[1], &cells[2], &cells[3], &cells[4]);
+
             writeln!(
                 out_file,
-                "            mode: AddressingMode::{},",
-                to_addressing_mode(&cells[2])
+                "        {} => Ok(DecodedInstruction {{ opcode: OpCode::{}, mode: AddressingMode::{}, execute: execute_{}, extra_bytes: {}, cycles: {}, }}),",
+                hex_opcode,
+                mnemonic.to_ascii_uppercase(),
+                to_addressing_mode(mode),
+                mnemonic.to_ascii_lowercase(),
+                bytes.parse::<u8>().unwrap(),   // TODO need better error handling for number parsing
+                cycles.parse::<u8>().unwrap(),
             )?;
-            writeln!(
-                out_file,
-                "            execute: execute_{},",
-                cells[1].to_ascii_lowercase()
-            )?;
-            writeln!(out_file, "        }}),")?;
+
             line_cnt += 1;
         }
     } else {
@@ -54,7 +59,7 @@ fn main() -> io::Result<()> {
         opcodes_file.display()
     );
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=src/opcodes.csv");
+    println!("cargo:rerun-if-changed=src/engine/opcodes-mos6502.csv");
     Ok(())
 }
 

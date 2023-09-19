@@ -24,6 +24,9 @@ pub struct CpuRegisterSnapshot {
     pub stack_pointer: u16,
     pub program_counter: u16,
     pub status: u8,
+    // stats counters:
+    pub accumulated_cycles: u64,
+    pub accumulated_instructions: u64,
 }
 
 pub trait CpuController {
