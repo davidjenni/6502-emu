@@ -1,6 +1,6 @@
 use crate::CpuError;
 
-pub trait MemoryAccess {
+pub trait Memory {
     fn read(&self, address: u16) -> Result<u8, CpuError>;
     fn read_word(&self, address: u16) -> Result<u16, CpuError>;
     fn read_zero_page_word(&self, address: u8) -> Result<u16, CpuError>;
@@ -12,25 +12,25 @@ pub trait MemoryAccess {
 }
 
 #[derive(Debug, Clone)]
-pub struct Memory {
+pub struct MemoryImpl {
     memory: Vec<u8>,
 }
 
-impl Memory {
-    pub fn new(size: usize) -> Memory {
-        Memory {
+impl MemoryImpl {
+    pub fn new(size: usize) -> MemoryImpl {
+        MemoryImpl {
             memory: vec![0; size],
         }
     }
 }
 
-impl Default for Memory {
+impl Default for MemoryImpl {
     fn default() -> Self {
         Self::new(64 * 1024)
     }
 }
 
-impl MemoryAccess for Memory {
+impl Memory for MemoryImpl {
     fn read(&self, address: u16) -> Result<u8, CpuError> {
         if (address as usize) >= self.memory.len() {
             return Err(CpuError::InvalidAddress);
@@ -88,20 +88,20 @@ pub mod tests {
     #[test]
     #[should_panic(expected = "InvalidAddress")]
     fn enforce_size_limit() {
-        let mut mem = Memory::new(10);
+        let mut mem = MemoryImpl::new(10);
         mem.write(10, 0).unwrap();
     }
 
     #[test]
     fn get_size() -> Result<(), CpuError> {
-        let mem = Memory::new(10);
+        let mem = MemoryImpl::new(10);
         assert_eq!(10, mem.get_size());
         Ok(())
     }
 
     #[test]
     fn write_read() -> Result<(), CpuError> {
-        let mut mem = Memory::new(0x2000);
+        let mut mem = MemoryImpl::new(0x2000);
         let addr = 0x1234;
         mem.write(addr, 0xBB)?;
         assert_eq!(0xBB, mem.read(addr)?);
@@ -112,7 +112,7 @@ pub mod tests {
 
     #[test]
     fn has_little_endian_read() -> Result<(), CpuError> {
-        let mut mem = Memory::new(10);
+        let mut mem = MemoryImpl::new(10);
         mem.write(0, 0x34)?;
         mem.write(1, 0x12)?;
         assert_eq!(0x1234, mem.read_word(0)?);
@@ -121,7 +121,7 @@ pub mod tests {
 
     #[test]
     fn has_little_endian_write() -> Result<(), CpuError> {
-        let mut mem = Memory::new(10);
+        let mut mem = MemoryImpl::new(10);
         mem.write_word(0, 0x1234)?;
         assert_eq!(0x34, mem.read(0)?);
         assert_eq!(0x12, mem.read(1)?);
@@ -130,7 +130,7 @@ pub mod tests {
 
     #[test]
     fn load_program() -> Result<(), CpuError> {
-        let mut mem = Memory::default();
+        let mut mem = MemoryImpl::default();
         mem.load_program(0x1000, &[0x12, 0x34, 0x56])?;
         assert_eq!(0x12, mem.read(0x1000)?);
         assert_eq!(0x34, mem.read(0x1001)?);
@@ -140,7 +140,7 @@ pub mod tests {
 
     #[test]
     fn zero_page_read_write() -> Result<(), CpuError> {
-        let mut mem = Memory::new(10);
+        let mut mem = MemoryImpl::new(10);
         mem.write(0, 0xBB)?;
         assert_eq!(0xBB, mem.read(0)?);
         mem.write(9, 0xEE)?;

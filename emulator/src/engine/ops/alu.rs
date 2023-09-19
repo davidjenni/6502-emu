@@ -1,5 +1,5 @@
 use crate::cpu::{AddressingMode, Cpu};
-use crate::memory_access::MemoryAccess;
+use crate::memory::Memory;
 use crate::CpuError;
 
 // Arithmetic operations:

@@ -129,7 +129,7 @@ pub fn execute_rts(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory_access::MemoryAccess;
+    use crate::memory::Memory;
     use crate::status_register::StatusRegister;
 
     #[test]

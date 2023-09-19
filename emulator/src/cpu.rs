@@ -2,8 +2,8 @@ use crate::address_bus::AddressBus;
 use crate::address_bus::AddressBusImpl;
 use crate::engine::decoder;
 use crate::engine::decoder::DecodedInstruction;
-use crate::memory_access::Memory;
-use crate::memory_access::MemoryAccess;
+use crate::memory::Memory;
+use crate::memory::MemoryImpl;
 use crate::stack_pointer::StackPointer;
 use crate::stack_pointer::StackPointerImpl;
 use crate::status_register::StatusRegister;
@@ -35,9 +35,9 @@ pub struct Cpu {
     pub index_y: u8,
     pub status: StatusRegister,
 
-    pub memory: Memory,              // TODO: should be reverted back to private
+    pub memory: MemoryImpl, // TODO: should be reverted back to private
     pub address_bus: AddressBusImpl, // TODO: should be reverted back to private
-    pub stack: StackPointerImpl,     // TODO: should be reverted back to private
+    pub stack: StackPointerImpl, // TODO: should be reverted back to private
     program_loaded: bool,
 }
 
@@ -110,7 +110,7 @@ impl Cpu {
             index_x: 0,
             index_y: 0,
             status: StatusRegister::new(),
-            memory: Memory::default(),
+            memory: MemoryImpl::default(),
             address_bus: AddressBusImpl::new(),
             stack: StackPointerImpl::new(),
             program_loaded: false,
@@ -218,7 +218,7 @@ mod tests {
         Ok(cpu)
     }
 
-    fn populate_zero_page(mem: &mut dyn MemoryAccess, data: &[u8]) -> Result<(), CpuError> {
+    fn populate_zero_page(mem: &mut dyn Memory, data: &[u8]) -> Result<(), CpuError> {
         mem.load_program(ZERO_PAGE_ADDR as u16, data)?;
         Ok(())
     }
