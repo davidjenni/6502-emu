@@ -3,7 +3,7 @@ use crate::cpu::Cpu;
 mod address_bus;
 mod cpu;
 mod engine;
-mod memory_access;
+mod memory;
 mod stack_pointer;
 mod status_register;
 

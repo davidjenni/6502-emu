@@ -140,7 +140,7 @@ fn compare_register(register: u8, mode: AddressingMode, cpu: &mut Cpu) -> Result
 mod tests {
     use super::*;
     use crate::address_bus::AddressBus;
-    use crate::memory_access::MemoryAccess;
+    use crate::memory::Memory;
 
     const NEXT_PC: u16 = 0x1234;
 

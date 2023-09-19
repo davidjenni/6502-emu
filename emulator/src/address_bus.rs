@@ -1,9 +1,9 @@
-use crate::memory_access::MemoryAccess;
+use crate::memory::Memory;
 use crate::CpuError;
 
 pub trait AddressBus {
-    fn fetch_byte_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u8, CpuError>;
-    fn fetch_word_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u16, CpuError>;
+    fn fetch_byte_at_pc(&mut self, mem: &mut dyn Memory) -> Result<u8, CpuError>;
+    fn fetch_word_at_pc(&mut self, mem: &mut dyn Memory) -> Result<u16, CpuError>;
     fn set_pc(&mut self, address: u16) -> Result<(), CpuError>;
     fn get_pc(&self) -> u16;
 }
@@ -20,7 +20,7 @@ impl AddressBusImpl {
 }
 
 impl AddressBus for AddressBusImpl {
-    fn fetch_byte_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u8, CpuError> {
+    fn fetch_byte_at_pc(&mut self, mem: &mut dyn Memory) -> Result<u8, CpuError> {
         if mem.get_size() <= self.pc as usize {
             return Err(CpuError::InvalidAddress);
         }
@@ -29,7 +29,7 @@ impl AddressBus for AddressBusImpl {
         Ok(op)
     }
 
-    fn fetch_word_at_pc(&mut self, mem: &mut dyn MemoryAccess) -> Result<u16, CpuError> {
+    fn fetch_word_at_pc(&mut self, mem: &mut dyn Memory) -> Result<u16, CpuError> {
         // little endian, so low byte is read first:
         let lo = self.fetch_byte_at_pc(mem)? as u16;
         let hi = self.fetch_byte_at_pc(mem)? as u16;
@@ -64,8 +64,8 @@ mod tests {
     use mockall::*;
 
     mock! {
-        pub _MemoryAccess {}
-        impl MemoryAccess for _MemoryAccess {
+        pub _Memory {}
+        impl Memory for _Memory {
             fn read(&self, address: u16) -> Result<u8, CpuError>;
             fn read_word(&self, address: u16) -> Result<u16, CpuError>;
             fn read_zero_page_word(&self, address: u8) -> Result<u16, CpuError>;
@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn can_fetch_next_op() -> Result<(), CpuError> {
         let mut bus = AddressBusImpl::new();
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_read().returning(|_| Ok(42));
         mem.expect_get_size().returning(|| 0x80);
 
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn fetch_next_op_panics_on_invalid_address() -> Result<(), CpuError> {
         let mut bus = AddressBusImpl::new();
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_read().returning(|_| Ok(42));
         mem.expect_get_size().returning(|| 0x80);
 

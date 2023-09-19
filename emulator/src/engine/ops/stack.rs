@@ -75,7 +75,7 @@ pub fn execute_txs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 mod tests {
     use super::*;
     use crate::address_bus::AddressBus;
-    use crate::memory_access::MemoryAccess;
+    use crate::memory::Memory;
 
     const ZERO_PAGE_ADDR: u16 = 0x00E0;
     const NEXT_PC: u16 = 0x0300;

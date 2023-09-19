@@ -1,13 +1,13 @@
-use crate::memory_access::MemoryAccess;
+use crate::memory::Memory;
 use crate::CpuError;
 
 pub trait StackPointer {
     fn get_sp(&self) -> Result<u16, CpuError>;
     fn set_sp(&mut self, value: u16) -> Result<(), CpuError>;
-    fn push_byte(&mut self, mem: &mut dyn MemoryAccess, value: u8) -> Result<(), CpuError>;
-    fn pop_byte(&mut self, mem: &dyn MemoryAccess) -> Result<u8, CpuError>;
-    fn push_word(&mut self, mem: &mut dyn MemoryAccess, value: u16) -> Result<(), CpuError>;
-    fn pop_word(&mut self, mem: &dyn MemoryAccess) -> Result<u16, CpuError>;
+    fn push_byte(&mut self, mem: &mut dyn Memory, value: u8) -> Result<(), CpuError>;
+    fn pop_byte(&mut self, mem: &dyn Memory) -> Result<u8, CpuError>;
+    fn push_word(&mut self, mem: &mut dyn Memory, value: u16) -> Result<(), CpuError>;
+    fn pop_word(&mut self, mem: &dyn Memory) -> Result<u16, CpuError>;
     fn reset(&mut self) -> Result<(), CpuError>;
 }
 
@@ -39,7 +39,7 @@ impl StackPointer for StackPointerImpl {
         Ok(())
     }
 
-    fn push_byte(&mut self, mem: &mut dyn MemoryAccess, value: u8) -> Result<(), CpuError> {
+    fn push_byte(&mut self, mem: &mut dyn Memory, value: u8) -> Result<(), CpuError> {
         if self.sp == 0x00 {
             return Err(CpuError::StackOverflow);
         }
@@ -48,7 +48,7 @@ impl StackPointer for StackPointerImpl {
         Ok(())
     }
 
-    fn pop_byte(&mut self, mem: &dyn MemoryAccess) -> Result<u8, CpuError> {
+    fn pop_byte(&mut self, mem: &dyn Memory) -> Result<u8, CpuError> {
         if self.sp == 0xFF {
             return Err(CpuError::StackOverflow);
         }
@@ -57,7 +57,7 @@ impl StackPointer for StackPointerImpl {
         Ok(value)
     }
 
-    fn push_word(&mut self, mem: &mut dyn MemoryAccess, value: u16) -> Result<(), CpuError> {
+    fn push_word(&mut self, mem: &mut dyn Memory, value: u16) -> Result<(), CpuError> {
         if self.sp <= 0x01 {
             return Err(CpuError::StackOverflow);
         }
@@ -67,7 +67,7 @@ impl StackPointer for StackPointerImpl {
         Ok(())
     }
 
-    fn pop_word(&mut self, mem: &dyn MemoryAccess) -> Result<u16, CpuError> {
+    fn pop_word(&mut self, mem: &dyn Memory) -> Result<u16, CpuError> {
         if self.sp >= 0xFE {
             return Err(CpuError::StackOverflow);
         }
@@ -108,8 +108,8 @@ mod tests {
     use mockall::*;
 
     mock! {
-        pub _MemoryAccess {}
-        impl MemoryAccess for _MemoryAccess {
+        pub _Memory {}
+        impl Memory for _Memory {
             fn read(&self, address: u16) -> Result<u8, CpuError>;
             fn read_word(&self, address: u16) -> Result<u16, CpuError>;
             fn read_zero_page_word(&self, address: u8) -> Result<u16, CpuError>;
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn pop_from_empty_stack_error_stack_overflow() -> Result<(), CpuError> {
         let mut sp = StackPointerImpl::new();
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_write().returning(|_, _| Ok(()));
 
         // try byte:
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn push_to_full_stack_error_stack_overflow() -> Result<(), CpuError> {
         let mut sp = StackPointerImpl::new();
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_read().returning(|_| Ok(42));
 
         // indicate stack reached bottom:
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn pop_stack_overflow() {
         let mut sp = StackPointerImpl::new();
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_read().returning(|_| Ok(0));
         mem.expect_read_word().returning(|_| Ok(0));
         mem.expect_write().returning(|_, _| Ok(()));
@@ -197,7 +197,7 @@ mod tests {
     fn push_byte() -> Result<(), CpuError> {
         let mut sp = StackPointerImpl::new();
 
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_write()
             .with(eq(0x01FF), eq(0x12))
             .returning(|_, _| Ok(()));
@@ -216,7 +216,7 @@ mod tests {
     fn push_word() -> Result<(), CpuError> {
         let mut sp = StackPointerImpl::new();
 
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_write_word()
             .with(eq(0x01FE), eq(0x1234))
             .returning(|_, _| Ok(()));
@@ -230,7 +230,7 @@ mod tests {
     fn pop_byte() -> Result<(), CpuError> {
         let mut sp = StackPointerImpl::new();
 
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_read().with(eq(0x01FF)).returning(|_| Ok(0x12));
         mem.expect_read().with(eq(0x01FE)).returning(|_| Ok(0x34));
 
@@ -247,7 +247,7 @@ mod tests {
     fn pop_word() -> Result<(), CpuError> {
         let mut sp = StackPointerImpl::new();
 
-        let mut mem = Mock_MemoryAccess::new();
+        let mut mem = Mock_Memory::new();
         mem.expect_read_word()
             .with(eq(0x01FE))
             .returning(|_| Ok(0x1234));
