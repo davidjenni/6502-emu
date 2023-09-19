@@ -1,6 +1,14 @@
 use crate::memory::Memory;
 use crate::CpuError;
 
+#[allow(dead_code)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum SystemVector {
+    NMI = 0xFFFA,
+    Reset = 0xFFFC,
+    IRQ = 0xFFFE,
+}
+
 pub trait AddressBus {
     fn fetch_byte_at_pc(&mut self, mem: &mut dyn Memory) -> Result<u8, CpuError>;
     fn fetch_word_at_pc(&mut self, mem: &mut dyn Memory) -> Result<u16, CpuError>;
