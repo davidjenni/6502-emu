@@ -1,7 +1,8 @@
-use crate::address_bus::AddressBus;
 use crate::address_bus::AddressBusImpl;
+use crate::address_bus::{AddressBus, SystemVector};
 use crate::engine::decoder;
 use crate::engine::decoder::DecodedInstruction;
+use crate::engine::opcodes::OpCode;
 use crate::memory::Memory;
 use crate::memory::MemoryImpl;
 use crate::stack_pointer::StackPointer;
@@ -38,42 +39,34 @@ pub struct Cpu {
     pub memory: Box<dyn Memory>, // TODO: should be reverted back to private
     pub address_bus: Box<dyn AddressBus>, // TODO: should be reverted back to private
     pub stack: Box<dyn StackPointer>, // TODO: should be reverted back to private
-    program_loaded: bool,
+
+    // stats counters:
+    accumulated_cycles: u64,
+    accumulated_instructions: u64,
 }
 
 impl CpuController for Cpu {
     fn reset(&mut self) -> Result<(), CpuError> {
         self.stack.reset()?;
-        todo!()
-        // Ok(())
-    }
-
-    fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError> {
-        self.address_bus.set_pc(0x0300)?;
-        if start_addr.is_some() {
-            self.address_bus.set_pc(start_addr.unwrap())?;
-        }
-        loop {
-            self.step()?;
-            if self.status.get_break() {
-                break;
-            }
-        }
-        Ok(self.get_register_snapshot())
-    }
-
-    fn step(&mut self) -> Result<(), CpuError> {
-        if !self.program_loaded {
-            return Err(CpuError::NotInitialized);
-        }
-
-        let decoded = self.fetch_and_decode()?;
-        (decoded.execute)(decoded.mode, self)?;
+        self.address_bus.set_pc(SystemVector::Reset as u16)?;
+        self.accumulated_cycles = 0;
+        self.accumulated_instructions = 0;
         Ok(())
     }
 
+    fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError> {
+        // delegate implementation to Cpu
+        self.run(start_addr)?;
+        Ok(self.get_register_snapshot())
+    }
+
+    fn step(&mut self) -> Result<u16, CpuError> {
+        // delegate implementation to Cpu
+        self.step()?;
+        Ok(self.address_bus.get_pc())
+    }
+
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
-        self.program_loaded = true;
         self.memory.load_program(start_addr, program)
     }
 
@@ -85,6 +78,8 @@ impl CpuController for Cpu {
             stack_pointer: self.stack.get_sp().unwrap(),
             program_counter: self.address_bus.get_pc(),
             status: self.status.get_status(),
+            accumulated_cycles: self.accumulated_cycles,
+            accumulated_instructions: self.accumulated_instructions,
         }
     }
 
@@ -113,8 +108,32 @@ impl Cpu {
             memory: Box::<MemoryImpl>::default(),
             address_bus: Box::new(AddressBusImpl::new()),
             stack: Box::new(StackPointerImpl::new()),
-            program_loaded: false,
+            accumulated_cycles: 0,
+            accumulated_instructions: 0,
         }
+    }
+
+    pub fn run(&mut self, start_addr: Option<u16>) -> Result<(), CpuError> {
+        self.address_bus.set_pc(if start_addr.is_some() {
+            start_addr.unwrap()
+        } else {
+            SystemVector::Reset as u16
+        })?;
+        loop {
+            let (last_opcode, cycles) = self.step()?;
+            self.accumulated_instructions += 1;
+            self.accumulated_cycles += cycles as u64;
+            if last_opcode == OpCode::BRK {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn step(&mut self) -> Result<(OpCode, u8), CpuError> {
+        let decoded = self.fetch_and_decode()?;
+        (decoded.execute)(decoded.mode, self)?;
+        Ok((decoded.opcode, decoded.cycles))
     }
 
     fn fetch_and_decode(&mut self) -> Result<DecodedInstruction, CpuError> {

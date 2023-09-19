@@ -24,12 +24,15 @@ pub struct CpuRegisterSnapshot {
     pub stack_pointer: u16,
     pub program_counter: u16,
     pub status: u8,
+    // stats counters:
+    pub accumulated_cycles: u64,
+    pub accumulated_instructions: u64,
 }
 
 pub trait CpuController {
     fn reset(&mut self) -> Result<(), CpuError>;
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
-    fn step(&mut self) -> Result<(), CpuError>;
+    fn step(&mut self) -> Result<u16, CpuError>;
     fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError>;
     fn get_register_snapshot(&self) -> CpuRegisterSnapshot;
     fn get_byte_at(&self, address: u16) -> Result<u8, CpuError>;
@@ -39,8 +42,12 @@ pub trait CpuController {
 pub enum CpuType {
     MOS6502,
 }
+
 pub fn create(kind: CpuType) -> Result<Box<dyn CpuController>, CpuError> {
-    match kind {
-        CpuType::MOS6502 => Ok(Box::<Cpu>::default()),
-    }
+    let mut cpu = match kind {
+        // CpuType::MOS6502 => Ok(Box::<Cpu>::default()),
+        CpuType::MOS6502 => Cpu::default(),
+    };
+    cpu.reset()?;
+    Ok(Box::new(cpu))
 }

@@ -1,5 +1,5 @@
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum OpCode {
     ADC, // Add Memory to Accumulator with Carry
     AND, // "AND" Memory with Accumulator

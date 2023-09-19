@@ -1,3 +1,4 @@
+use crate::address_bus::SystemVector;
 use crate::cpu::{AddressingMode, Cpu};
 use crate::CpuError;
 
@@ -16,11 +17,8 @@ pub fn execute_brk(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     cpu.stack
         .push_byte(cpu.memory.as_mut(), status | 0b0001_0000)?;
 
-    // HACK: set Break flag on CPU status register as well for Cpu.run() to stop on BRK
-    cpu.status.set_break_command(true);
-
-    // TODO: continue on IRQ vector: 0xFFFE
-    // cpu.address_bus.set_pc(0xFFFE)?;
+    // continue via IRQ vector: 0xFFFE
+    cpu.address_bus.set_pc(SystemVector::IRQ as u16)?;
     Ok(())
 }
 
