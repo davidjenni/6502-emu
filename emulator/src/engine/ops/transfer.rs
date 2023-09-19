@@ -1,5 +1,4 @@
 use crate::cpu::{AddressingMode, Cpu};
-use crate::memory::Memory;
 use crate::CpuError;
 
 // LDA/X/Y:

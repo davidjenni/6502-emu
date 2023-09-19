@@ -8,7 +8,7 @@ pub fn execute_pha(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
-    cpu.stack.push_byte(&mut cpu.memory, cpu.accumulator)?;
+    cpu.stack.push_byte(cpu.memory.as_mut(), cpu.accumulator)?;
     Ok(())
 }
 
@@ -20,7 +20,7 @@ pub fn execute_php(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
         return Err(CpuError::InvalidAddressingMode);
     }
     cpu.stack
-        .push_byte(&mut cpu.memory, cpu.status.get_status() & 0xCF)?;
+        .push_byte(cpu.memory.as_mut(), cpu.status.get_status() & 0xCF)?;
     Ok(())
 }
 
@@ -31,7 +31,7 @@ pub fn execute_pla(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
-    cpu.accumulator = cpu.stack.pop_byte(&cpu.memory)?;
+    cpu.accumulator = cpu.stack.pop_byte(cpu.memory.as_mut())?;
     cpu.status.update_from(cpu.accumulator);
     Ok(())
 }
@@ -43,7 +43,7 @@ pub fn execute_plp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
-    let status = cpu.stack.pop_byte(&cpu.memory)?;
+    let status = cpu.stack.pop_byte(cpu.memory.as_mut())?;
     cpu.status.set_status(status & 0xCF); // ignore Break and undefined flags
     Ok(())
 }
@@ -73,7 +73,6 @@ pub fn execute_txs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::Memory;
 
     const ZERO_PAGE_ADDR: u16 = 0x00E0;
     const NEXT_PC: u16 = 0x0300;
@@ -113,7 +112,7 @@ mod tests {
         cpu.accumulator = 0x42;
         let org_status = cpu.status.get_status();
         execute_pha(AddressingMode::Implied, &mut cpu).unwrap();
-        assert_eq!(cpu.stack.pop_byte(&cpu.memory)?, 0x42);
+        assert_eq!(cpu.stack.pop_byte(cpu.memory.as_mut())?, 0x42);
         assert_eq!(cpu.status.get_status(), org_status);
         Ok(())
     }
@@ -129,14 +128,14 @@ mod tests {
         let org_status = cpu.status.get_status();
         execute_php(AddressingMode::Implied, &mut cpu).unwrap();
         // break and undefined flags are ignored
-        assert_eq!(cpu.stack.pop_byte(&cpu.memory)?, org_status & 0xCF);
+        assert_eq!(cpu.stack.pop_byte(cpu.memory.as_mut())?, org_status & 0xCF);
         Ok(())
     }
 
     #[test]
     fn pla() -> Result<(), CpuError> {
         let mut cpu = create_cpu();
-        cpu.stack.push_byte(&mut cpu.memory, 0x42)?;
+        cpu.stack.push_byte(cpu.memory.as_mut(), 0x42)?;
         cpu.status.set_negative(true);
         cpu.status.set_zero(true);
         execute_pla(AddressingMode::Implied, &mut cpu).unwrap();
@@ -150,7 +149,7 @@ mod tests {
     fn plp() -> Result<(), CpuError> {
         let mut cpu = create_cpu();
         let pushed_status = 0b0100_1100;
-        cpu.stack.push_byte(&mut cpu.memory, pushed_status)?;
+        cpu.stack.push_byte(cpu.memory.as_mut(), pushed_status)?;
         cpu.status.set_negative(true);
         cpu.status.set_zero(true);
         cpu.status.set_break_command(true);
