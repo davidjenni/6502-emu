@@ -1,5 +1,4 @@
 use crate::cpu::{AddressingMode, Cpu};
-use crate::memory::Memory;
 use crate::CpuError;
 
 // Arithmetic operations:
@@ -239,7 +238,6 @@ fn read_modify_write(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::address_bus::AddressBus;
 
     const ZERO_PAGE_ADDR: u16 = 0x00E0;
     const NEXT_PC: u16 = 0x0200;

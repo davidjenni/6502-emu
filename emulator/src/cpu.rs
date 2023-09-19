@@ -35,9 +35,9 @@ pub struct Cpu {
     pub index_y: u8,
     pub status: StatusRegister,
 
-    pub memory: MemoryImpl, // TODO: should be reverted back to private
-    pub address_bus: AddressBusImpl, // TODO: should be reverted back to private
-    pub stack: StackPointerImpl, // TODO: should be reverted back to private
+    pub memory: Box<dyn Memory>, // TODO: should be reverted back to private
+    pub address_bus: Box<dyn AddressBus>, // TODO: should be reverted back to private
+    pub stack: Box<dyn StackPointer>, // TODO: should be reverted back to private
     program_loaded: bool,
 }
 
@@ -110,15 +110,15 @@ impl Cpu {
             index_x: 0,
             index_y: 0,
             status: StatusRegister::new(),
-            memory: MemoryImpl::default(),
-            address_bus: AddressBusImpl::new(),
-            stack: StackPointerImpl::new(),
+            memory: Box::<MemoryImpl>::default(),
+            address_bus: Box::new(AddressBusImpl::new()),
+            stack: Box::new(StackPointerImpl::new()),
             program_loaded: false,
         }
     }
 
     fn fetch_and_decode(&mut self) -> Result<DecodedInstruction, CpuError> {
-        let opcode = self.address_bus.fetch_byte_at_pc(&mut self.memory)?;
+        let opcode = self.address_bus.fetch_byte_at_pc(self.memory.as_mut())?;
         let res = decoder::decode(opcode)?;
         Ok(res)
     }
@@ -128,34 +128,34 @@ impl Cpu {
     pub fn get_effective_address(&mut self, mode: AddressingMode) -> Result<u16, CpuError> {
         match mode {
             AddressingMode::ZeroPage => {
-                Ok(self.address_bus.fetch_byte_at_pc(&mut self.memory)? as u16)
+                Ok(self.address_bus.fetch_byte_at_pc(self.memory.as_mut())? as u16)
             }
             AddressingMode::ZeroPageX => Ok(self
                 .address_bus
-                .fetch_byte_at_pc(&mut self.memory)?
+                .fetch_byte_at_pc(self.memory.as_mut())?
                 .wrapping_add(self.index_x) as u16),
             AddressingMode::ZeroPageY => Ok(self
                 .address_bus
-                .fetch_byte_at_pc(&mut self.memory)?
+                .fetch_byte_at_pc(self.memory.as_mut())?
                 .wrapping_add(self.index_y) as u16),
             AddressingMode::Relative => {
-                let offset = self.address_bus.fetch_byte_at_pc(&mut self.memory)? as i8;
+                let offset = self.address_bus.fetch_byte_at_pc(self.memory.as_mut())? as i8;
                 Ok(self.address_bus.get_pc().wrapping_add(offset as u16))
             }
             AddressingMode::Absolute => {
-                let word = self.address_bus.fetch_word_at_pc(&mut self.memory)?;
+                let word = self.address_bus.fetch_word_at_pc(self.memory.as_mut())?;
                 Ok(word)
             }
             AddressingMode::AbsoluteX => {
-                let word = self.address_bus.fetch_word_at_pc(&mut self.memory)?;
+                let word = self.address_bus.fetch_word_at_pc(self.memory.as_mut())?;
                 Ok(word + self.index_x as u16)
             }
             AddressingMode::AbsoluteY => {
-                let word = self.address_bus.fetch_word_at_pc(&mut self.memory)?;
+                let word = self.address_bus.fetch_word_at_pc(self.memory.as_mut())?;
                 Ok(word + self.index_y as u16)
             }
             AddressingMode::Indirect => {
-                let indirect_addr = self.address_bus.fetch_word_at_pc(&mut self.memory)?;
+                let indirect_addr = self.address_bus.fetch_word_at_pc(self.memory.as_mut())?;
                 // 6502 bug: if low byte is 0xff, then high byte is fetched from non-incremented high byte
                 // i.e. no proper page boundary crossing
                 let low_indirect = self.memory.read(indirect_addr)? as u16;
@@ -185,7 +185,7 @@ impl Cpu {
 
     pub fn get_effective_operand(&mut self, mode: AddressingMode) -> Result<u8, CpuError> {
         match mode {
-            AddressingMode::Immediate => self.address_bus.fetch_byte_at_pc(&mut self.memory),
+            AddressingMode::Immediate => self.address_bus.fetch_byte_at_pc(self.memory.as_mut()),
             AddressingMode::Accumulator => Ok(self.accumulator),
             AddressingMode::Relative => Err(CpuError::InvalidAddressingMode),
             _ => {
@@ -212,7 +212,7 @@ mod tests {
         cpu.address_bus.set_pc(START_ADDR)?;
 
         // prepare PC to point past the opcode:
-        let opcode_read = cpu.address_bus.fetch_byte_at_pc(&mut cpu.memory)?;
+        let opcode_read = cpu.address_bus.fetch_byte_at_pc(cpu.memory.as_mut())?;
         assert_eq!(opcode_read, OP_CODE);
 
         Ok(cpu)
@@ -261,7 +261,7 @@ mod tests {
     fn get_effective_operand_zero_page() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
 
-        populate_zero_page(&mut cpu.memory, &[EXPECTED])?;
+        populate_zero_page(cpu.memory.as_mut(), &[EXPECTED])?;
 
         let res = cpu.get_effective_operand(AddressingMode::ZeroPageX)?;
         assert_eq!(res, EXPECTED);
@@ -273,7 +273,7 @@ mod tests {
     fn get_effective_operand_zero_page_indexed_x() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
 
-        populate_zero_page(&mut cpu.memory, &[0xaa, 0xbb, 0xcc, EXPECTED])?;
+        populate_zero_page(cpu.memory.as_mut(), &[0xaa, 0xbb, 0xcc, EXPECTED])?;
 
         cpu.index_x = 3;
         cpu.index_y = 2; // should be ignored, since testing Indexed_X
@@ -287,7 +287,7 @@ mod tests {
     fn get_effective_operand_zero_page_indexed_y() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
 
-        populate_zero_page(&mut cpu.memory, &[0xaa, 0xbb, EXPECTED])?;
+        populate_zero_page(cpu.memory.as_mut(), &[0xaa, 0xbb, EXPECTED])?;
 
         cpu.index_y = 2;
         cpu.index_x = 3; // should be ignored, since testing Indexed_Y
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn get_effective_operand_indexed_x_indirect() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
-        populate_zero_page(&mut cpu.memory, &[0xaa, 0xbb, 0x21, 0x03])?;
+        populate_zero_page(cpu.memory.as_mut(), &[0xaa, 0xbb, 0x21, 0x03])?;
         cpu.memory.write(0x0321, EXPECTED)?;
 
         cpu.index_x = 2;
@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn get_effective_operand_indirect_indexed_y() -> Result<(), CpuError> {
         let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
-        populate_zero_page(&mut cpu.memory, &[0x1F, 0x03])?;
+        populate_zero_page(cpu.memory.as_mut(), &[0x1F, 0x03])?;
         cpu.memory.write(0x0321, EXPECTED)?;
 
         cpu.index_y = 2;

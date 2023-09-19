@@ -1,6 +1,4 @@
-use crate::address_bus::AddressBus;
 use crate::cpu::{AddressingMode, Cpu};
-use crate::stack_pointer::StackPointer;
 use crate::CpuError;
 
 // Branch operations:
@@ -108,7 +106,7 @@ pub fn execute_jsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     // see 6502 programming manual, section 8,1 pg 106:
     // "...PC address which points to the last byte of the JSR instruction onto the stack..."
     cpu.address_bus.set_pc(effective_address)?;
-    cpu.stack.push_word(&mut cpu.memory, return_address)?;
+    cpu.stack.push_word(cpu.memory.as_mut(), return_address)?;
     Ok(())
 }
 
@@ -119,7 +117,7 @@ pub fn execute_rts(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
-    let pc = cpu.stack.pop_word(&cpu.memory)?;
+    let pc = cpu.stack.pop_word(cpu.memory.as_mut())?;
     // see comment in execute_jsr:
     // now move the popped return address past the last byte of the JSR triple byte instruction
     cpu.address_bus.set_pc(pc + 1)?;
@@ -129,7 +127,6 @@ pub fn execute_rts(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::Memory;
     use crate::status_register::StatusRegister;
 
     #[test]
@@ -208,14 +205,14 @@ mod tests {
         execute_jsr(AddressingMode::Absolute, &mut cpu)?;
         assert_eq!(cpu.address_bus.get_pc(), 0x5432);
         // JSR pushes address of last byte of 3 byte instruction to stack:
-        assert_eq!(cpu.stack.pop_word(&cpu.memory)?, 0x0124);
+        assert_eq!(cpu.stack.pop_word(cpu.memory.as_mut())?, 0x0124);
         Ok(())
     }
 
     #[test]
     fn rts() -> Result<(), CpuError> {
         let mut cpu = Cpu::default();
-        cpu.stack.push_word(&mut cpu.memory, 0x1234)?;
+        cpu.stack.push_word(cpu.memory.as_mut(), 0x1234)?;
         execute_rts(AddressingMode::Implied, &mut cpu)?;
         // see execute_jsr: pushed PC is one byte short of the actual return address
         assert_eq!(cpu.address_bus.get_pc(), 0x1235);

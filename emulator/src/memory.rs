@@ -11,7 +11,7 @@ pub trait Memory {
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MemoryImpl {
     memory: Vec<u8>,
 }
@@ -27,6 +27,18 @@ impl MemoryImpl {
 impl Default for MemoryImpl {
     fn default() -> Self {
         Self::new(64 * 1024)
+    }
+}
+
+impl std::fmt::Debug for dyn Memory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MemoryAccess {{ size: {} }}", self.get_size(),)
+    }
+}
+
+impl std::fmt::Debug for MemoryImpl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MemoryAccess {{ size: {} }}", self.get_size(),)
     }
 }
 
