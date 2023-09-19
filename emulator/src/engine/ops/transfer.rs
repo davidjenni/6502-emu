@@ -110,7 +110,6 @@ pub fn execute_tya(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::address_bus::AddressBus;
 
     const ZERO_PAGE_ADDR: u16 = 0x00E0;
     const NEXT_PC: u16 = 0x0300;

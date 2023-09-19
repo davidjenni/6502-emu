@@ -1,5 +1,4 @@
 use crate::cpu::{AddressingMode, Cpu};
-use crate::stack_pointer::StackPointer;
 use crate::CpuError;
 
 // PHA: Push accumulator
@@ -74,7 +73,6 @@ pub fn execute_txs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::address_bus::AddressBus;
     use crate::memory::Memory;
 
     const ZERO_PAGE_ADDR: u16 = 0x00E0;

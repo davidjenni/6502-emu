@@ -1,6 +1,4 @@
-use crate::address_bus::AddressBus;
 use crate::cpu::{AddressingMode, Cpu};
-use crate::stack_pointer::StackPointer;
 use crate::CpuError;
 
 // Branch operations:

@@ -36,8 +36,8 @@ pub struct Cpu {
     pub status: StatusRegister,
 
     pub memory: MemoryImpl, // TODO: should be reverted back to private
-    pub address_bus: AddressBusImpl, // TODO: should be reverted back to private
-    pub stack: StackPointerImpl, // TODO: should be reverted back to private
+    pub address_bus: Box<dyn AddressBus>, // TODO: should be reverted back to private
+    pub stack: Box<dyn StackPointer>, // TODO: should be reverted back to private
     program_loaded: bool,
 }
 
@@ -111,8 +111,8 @@ impl Cpu {
             index_y: 0,
             status: StatusRegister::new(),
             memory: MemoryImpl::default(),
-            address_bus: AddressBusImpl::new(),
-            stack: StackPointerImpl::new(),
+            address_bus: Box::new(AddressBusImpl::new()),
+            stack: Box::new(StackPointerImpl::new()),
             program_loaded: false,
         }
     }
