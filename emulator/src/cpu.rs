@@ -11,6 +11,7 @@ use crate::status_register::StatusRegister;
 use crate::CpuController;
 use crate::CpuError;
 use crate::CpuRegisterSnapshot;
+use std::time::Instant;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AddressingMode {
@@ -43,6 +44,7 @@ pub struct Cpu {
     // stats counters:
     accumulated_cycles: u64,
     accumulated_instructions: u64,
+    approximate_clock_speed: f64,
 }
 
 impl CpuController for Cpu {
@@ -80,6 +82,7 @@ impl CpuController for Cpu {
             status: self.status.get_status(),
             accumulated_cycles: self.accumulated_cycles,
             accumulated_instructions: self.accumulated_instructions,
+            approximate_clock_speed: self.approximate_clock_speed,
         }
     }
 
@@ -110,6 +113,7 @@ impl Cpu {
             stack: Box::new(StackPointerImpl::new()),
             accumulated_cycles: 0,
             accumulated_instructions: 0,
+            approximate_clock_speed: 0.0,
         }
     }
 
@@ -119,6 +123,7 @@ impl Cpu {
         } else {
             SystemVector::Reset as u16
         })?;
+        let start = Instant::now();
         loop {
             let (last_opcode, cycles) = self.step()?;
             self.accumulated_instructions += 1;
@@ -127,6 +132,8 @@ impl Cpu {
                 break;
             }
         }
+        let elapsed = start.elapsed().as_secs_f64();
+        self.approximate_clock_speed = self.accumulated_cycles as f64 / elapsed;
         Ok(())
     }
 
