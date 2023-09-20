@@ -27,6 +27,7 @@ pub struct CpuRegisterSnapshot {
     // stats counters:
     pub accumulated_cycles: u64,
     pub accumulated_instructions: u64,
+    pub approximate_clock_speed: f64,
 }
 
 pub trait CpuController {

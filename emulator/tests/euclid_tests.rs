@@ -34,5 +34,13 @@ fn run_gcd_euclid() -> Result<(), CpuError> {
     assert_eq!(cpu.get_byte_at(0x0040)?, cpu.get_byte_at(0x0041)?);
     // read back transferred byte from zero page:
     assert_eq!(cpu.get_byte_at(0x0040)?, 7);
+    assert_eq!(snapshot.accumulated_instructions, 72);
+    assert_eq!(snapshot.accumulated_cycles, 191);
+    // clock speed is returned in Hz, so even a slow machine should be faster than 1kHz:
+    assert!(snapshot.approximate_clock_speed > 1000.0);
+    println!(
+        "approximate clock speed: {} MHz",
+        snapshot.approximate_clock_speed / 1_000_000.0
+    );
     Ok(())
 }
