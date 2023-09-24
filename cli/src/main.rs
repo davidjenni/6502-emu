@@ -1,9 +1,13 @@
 mod args;
+mod bin_file;
 
-use args::CliArgs;
+use std::process;
+
+use anyhow::{Context, Result};
 use clap::Parser;
 
-use mos6502_emulator::{create, CpuError, CpuRegisterSnapshot, CpuType};
+use args::CliArgs;
+use mos6502_emulator::{create, CpuRegisterSnapshot, CpuType};
 
 fn main() {
     let args = CliArgs::parse();
@@ -21,19 +25,37 @@ fn main() {
             println!("done.");
         }
         Err(e) => {
-            println!("Program finished with error: {}", e);
+            eprintln!("Program finished with error:\n {:#}", e);
+            process::exit(1);
         }
     }
 }
 
-fn run(args: &CliArgs) -> Result<CpuRegisterSnapshot, CpuError> {
+fn run(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
     let mut cpu = create(CpuType::MOS6502)?;
-    let start_addr: Option<u16> = None;
-    if args.file.is_some() {
-        todo!("Loading binary files is not implemented yet");
-        // todo!("Assign start_addr from binary file");
+    let mut load_addr: Option<u16> = None;
+
+    if args.binary.is_some() {
+        let file_name = args.binary.as_ref().unwrap();
+        let b = bin_file::load_program(file_name, None)
+            .with_context(|| format!("Error loading binary file '{}'", file_name))?;
+        load_addr = b.start_addr.or(args.load_address);
+        if load_addr.is_none() {
+            return Err(anyhow::anyhow!(
+                "Start address not specified, and cannot be inferred from file format"
+            ));
+        }
+        cpu.load_program(load_addr.unwrap(), &b.data)?;
+        println!(
+            "Loaded {} bytes at address {:04X}",
+            b.data.len(),
+            load_addr.unwrap()
+        );
+    } else {
+        println!("No binary file specified, running empty program with single BRK instruction");
     }
-    cpu.run(start_addr)
+    // For now, start address == load address
+    Ok(cpu.run(load_addr)?)
 }
 
 fn print_snapshot(snapshot: CpuRegisterSnapshot) {
@@ -47,7 +69,7 @@ fn print_snapshot(snapshot: CpuRegisterSnapshot) {
         snapshot.stack_pointer
     );
     println!(
-        "Instructions: {} Cycles: {} Clock speed: {:.3} MHz",
+        "Instructions: {}; Cycles: {}; Clock speed: {:.3} MHz",
         snapshot.accumulated_instructions,
         snapshot.accumulated_cycles,
         snapshot.approximate_clock_speed / 1_000_000.0
@@ -56,4 +78,19 @@ fn print_snapshot(snapshot: CpuRegisterSnapshot) {
         "Program finished after {} μs:",
         snapshot.elapsed_time.as_micros()
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn running_simplest_prg() {
+        let args = CliArgs::parse_from(["run", "-b=tests/assets/simplest.prg"]);
+        let snapshot = run(&args).unwrap();
+        assert_eq!(snapshot.program_counter, 0xFFFE);
+        assert_eq!(snapshot.accumulated_instructions, 3);
+        assert_eq!(snapshot.accumulated_cycles, 12);
+        assert_eq!(snapshot.accumulator, 0x42);
+    }
 }

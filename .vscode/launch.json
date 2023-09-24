@@ -15,7 +15,7 @@
           "kind": "bin"
         }
       },
-      // "args": ["-f=tests/6502_functional_test.bin"],
+      "args": ["-b=cli/tests/assets/simplest.bin", "-l=400"],
       "cwd": "${workspaceFolder}"
     },
     {
