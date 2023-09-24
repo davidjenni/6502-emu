@@ -21,6 +21,35 @@ This project is also my first foray into programming with rust; the code in this
 to get hopefully close to idiomatic rust programming.
 My notes on and sources for [the journey to rust](/docs/Learning_Rust.md).
 
+## Run via cargo
+
+```bash
+cargo run --bin r6502 -- -h
+
+A 6502 emulator written in Rust
+
+Usage: r6502.exe [OPTIONS] [COMMAND]
+
+Arguments:
+  [COMMAND]  [default: run] [possible values: run, debug]
+
+Options:
+  -f, --file <FILE>  Path to binary file to load and run
+  -h, --help         Print help
+  -V, --version      Print version
+
+```
+
+With an empty program, the reset vector 0xFFFE points to a BRK instruction,
+halting the "program" after one instruction.
+
+```bash
+cargo run --bin r6502 -- -h
+PC: FFFE: A: 00 X: 00 Y: 00 S: 00000000 SP: 01FC
+Instructions: 1 Cycles: 7 Clock speed: 1.045 MHz
+Program finished after 6 μs:
+```
+
 ## Feedback & Questions
 
 Please use the issues tracker in the home repo: <https://github.com/davidjenni/6502-emu/issues>

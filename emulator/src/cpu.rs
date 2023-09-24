@@ -11,7 +11,8 @@ use crate::status_register::StatusRegister;
 use crate::CpuController;
 use crate::CpuError;
 use crate::CpuRegisterSnapshot;
-use std::time::Instant;
+use std::fmt;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AddressingMode {
@@ -42,6 +43,7 @@ pub struct Cpu {
     pub stack: Box<dyn StackPointer>, // TODO: should be reverted back to private
 
     // stats counters:
+    elapsed_time: Duration,
     accumulated_cycles: u64,
     accumulated_instructions: u64,
     approximate_clock_speed: f64,
@@ -80,6 +82,7 @@ impl CpuController for Cpu {
             stack_pointer: self.stack.get_sp().unwrap(),
             program_counter: self.address_bus.get_pc(),
             status: self.status.get_status(),
+            elapsed_time: self.elapsed_time,
             accumulated_cycles: self.accumulated_cycles,
             accumulated_instructions: self.accumulated_instructions,
             approximate_clock_speed: self.approximate_clock_speed,
@@ -101,6 +104,21 @@ impl Default for Cpu {
     }
 }
 
+impl fmt::Display for CpuError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CpuError::InvalidOpcode(opcode) => {
+                write!(f, "Invalid opcode: 0x{:02X}", opcode)
+            }
+            // CpuError::InvalidAddress(address) => {
+            //     write!(f, "Invalid address: 0x{:04X}", address)
+            // }
+            // ...
+            _ => write!(f, "CpuError"),
+        }
+    }
+}
+
 impl Cpu {
     pub fn new() -> Cpu {
         Cpu {
@@ -114,6 +132,7 @@ impl Cpu {
             accumulated_cycles: 0,
             accumulated_instructions: 0,
             approximate_clock_speed: 0.0,
+            elapsed_time: Duration::new(0, 0),
         }
     }
 
@@ -132,8 +151,9 @@ impl Cpu {
                 break;
             }
         }
-        let elapsed = start.elapsed().as_secs_f64();
-        self.approximate_clock_speed = self.accumulated_cycles as f64 / elapsed;
+        self.elapsed_time = start.elapsed();
+        self.approximate_clock_speed =
+            self.accumulated_cycles as f64 / self.elapsed_time.as_secs_f64();
         Ok(())
     }
 

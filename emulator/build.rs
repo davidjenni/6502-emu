@@ -49,7 +49,10 @@ fn main() -> io::Result<()> {
     } else {
         println!("cargo:warning=failed to read i{}", opcodes_file.display());
     }
-    writeln!(out_file, "        _ => Err(CpuError::InvalidOpcode),")?;
+    writeln!(
+        out_file,
+        "        _ => Err(CpuError::InvalidOpcode(opcode)),"
+    )?;
     out_file.write_all(b"    }\n")?;
 
     out_file.flush()?;
