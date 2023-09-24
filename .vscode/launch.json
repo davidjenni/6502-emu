@@ -9,13 +9,13 @@
       "request": "launch",
       "name": "Debug executable 'cli'",
       "cargo": {
-        "args": ["build", "--bin=cli", "--package=cli"],
+        "args": ["build", "--package=r6502", "--bin=r6502"],
         "filter": {
-          "name": "cli",
+          "name": "r6502",
           "kind": "bin"
         }
       },
-      "args": [],
+      // "args": ["-f=tests/6502_functional_test.bin"],
       "cwd": "${workspaceFolder}"
     },
     {

@@ -1,3 +1,5 @@
+use std::time;
+
 use crate::cpu::Cpu;
 
 mod address_bus;
@@ -12,7 +14,7 @@ pub enum CpuError {
     NotInitialized,
     InvalidAddress,
     InvalidAddressingMode,
-    InvalidOpcode,
+    InvalidOpcode(u8), // TODO: also capture PC
     MissingOperand,
     StackOverflow,
 }
@@ -25,6 +27,7 @@ pub struct CpuRegisterSnapshot {
     pub program_counter: u16,
     pub status: u8,
     // stats counters:
+    pub elapsed_time: time::Duration,
     pub accumulated_cycles: u64,
     pub accumulated_instructions: u64,
     pub approximate_clock_speed: f64,
@@ -34,6 +37,7 @@ pub trait CpuController {
     fn reset(&mut self) -> Result<(), CpuError>;
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
     fn step(&mut self) -> Result<u16, CpuError>;
+    // TODO: run/step return a Result with a CpuError AND a CpuRegisterSnapshot to convey where the error occurred
     fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError>;
     fn get_register_snapshot(&self) -> CpuRegisterSnapshot;
     fn get_byte_at(&self, address: u16) -> Result<u8, CpuError>;
