@@ -1,5 +1,9 @@
+use std::time::{Duration, Instant};
+
 use crate::address_bus::AddressBusImpl;
 use crate::address_bus::{AddressBus, SystemVector};
+use crate::debugger::{Debugger, DebuggerImpl};
+// use crate::debugger::Debugger;
 use crate::engine::decoder;
 use crate::engine::decoder::DecodedInstruction;
 use crate::engine::opcodes::OpCode;
@@ -11,7 +15,6 @@ use crate::status_register::StatusRegister;
 use crate::CpuController;
 use crate::CpuError;
 use crate::CpuRegisterSnapshot;
-use std::time::{Duration, Instant};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AddressingMode {
@@ -63,37 +66,22 @@ impl CpuController for Cpu {
         Ok(self.get_register_snapshot())
     }
 
-    fn step(&mut self) -> Result<u16, CpuError> {
-        // delegate implementation to Cpu
-        self.step()?;
-        Ok(self.address_bus.get_pc())
-    }
-
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
         self.memory.load_program(start_addr, program)
     }
 
-    fn get_register_snapshot(&self) -> crate::CpuRegisterSnapshot {
-        crate::CpuRegisterSnapshot {
-            accumulator: self.accumulator,
-            x_register: self.index_x,
-            y_register: self.index_y,
-            stack_pointer: self.stack.get_sp().unwrap(),
-            program_counter: self.address_bus.get_pc(),
-            status: self.status.get_status(),
-            elapsed_time: self.elapsed_time,
-            accumulated_cycles: self.accumulated_cycles,
-            accumulated_instructions: self.accumulated_instructions,
-            approximate_clock_speed: self.approximate_clock_speed,
-        }
-    }
-
+    // TODO: move to debugger trait and impl
     fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {
         self.memory.read(address)
     }
 
+    // TODO: move to debugger trait and impl
     fn set_byte_at(&mut self, address: u16, value: u8) -> Result<(), CpuError> {
         self.memory.write(address, value)
+    }
+
+    fn as_debugger<'a>(&'a mut self) -> Box<dyn Debugger<'a> + 'a> {
+        DebuggerImpl::new(self)
     }
 }
 
@@ -118,6 +106,10 @@ impl Cpu {
             approximate_clock_speed: 0.0,
             elapsed_time: Duration::new(0, 0),
         }
+    }
+
+    pub fn set_pc(&mut self, addr: u16) -> Result<(), CpuError> {
+        self.address_bus.set_pc(addr)
     }
 
     pub fn run(&mut self, start_addr: Option<u16>) -> Result<(), CpuError> {
@@ -145,6 +137,21 @@ impl Cpu {
         let decoded = self.fetch_and_decode()?;
         (decoded.execute)(decoded.mode, self)?;
         Ok((decoded.opcode, decoded.cycles))
+    }
+
+    pub fn get_register_snapshot(&self) -> crate::CpuRegisterSnapshot {
+        crate::CpuRegisterSnapshot {
+            accumulator: self.accumulator,
+            x_register: self.index_x,
+            y_register: self.index_y,
+            stack_pointer: self.stack.get_sp().unwrap(),
+            program_counter: self.address_bus.get_pc(),
+            status: self.status.get_status(),
+            elapsed_time: self.elapsed_time,
+            accumulated_cycles: self.accumulated_cycles,
+            accumulated_instructions: self.accumulated_instructions,
+            approximate_clock_speed: self.approximate_clock_speed,
+        }
     }
 
     fn fetch_and_decode(&mut self) -> Result<DecodedInstruction, CpuError> {
