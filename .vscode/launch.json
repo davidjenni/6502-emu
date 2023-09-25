@@ -15,7 +15,7 @@
           "kind": "bin"
         }
       },
-      "args": ["-b=cli/tests/assets/simplest.bin", "-l=400"],
+      "args": ["debug", "-b=cli/tests/assets/simplest.prg"],
       "cwd": "${workspaceFolder}"
     },
     {

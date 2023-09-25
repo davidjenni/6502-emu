@@ -1,22 +1,23 @@
 mod args;
 mod bin_file;
+mod debug_loop;
 
 use std::process;
+use std::result::Result::Ok;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Error, Result};
 use clap::Parser;
 
 use args::CliArgs;
-use mos6502_emulator::{create, CpuRegisterSnapshot, CpuType};
+use debug_loop::{show_usage, DebuggerCommand, DebuggerLoop};
+use mos6502_emulator::{create, CpuController, CpuRegisterSnapshot, CpuType};
 
 fn main() {
     let args = CliArgs::parse();
 
     let outcome = match args.command {
         args::Command::Run => run(&args),
-        args::Command::Debug => {
-            todo!("Debug mode is not implemented yet");
-        }
+        args::Command::Debug => debug(&args),
     };
     match outcome {
         Ok(snapshot) => {
@@ -32,8 +33,50 @@ fn main() {
 }
 
 fn run(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
+    let (mut cpu, load_addr) = create_cpu(args)?;
+
+    // For now, start address == load address
+    anyhow::Ok(cpu.run(Some(load_addr))?)
+}
+
+fn debug(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
+    let (mut cpu, load_addr) = create_cpu(args)?;
+
+    let mut dbg = cpu.as_debugger();
+    dbg.set_pc(load_addr)?;
+
+    print_register(dbg.get_register_snapshot());
+    let mut dbg_loop = DebuggerLoop::new();
+    loop {
+        let cmd = dbg_loop.get_user_input();
+        match cmd {
+            DebuggerCommand::Step => {
+                let snapshot = dbg.step()?;
+                print_register(snapshot);
+            }
+            DebuggerCommand::Continue => {
+                let snapshot = dbg.run(None)?;
+                print_register(snapshot);
+            }
+            DebuggerCommand::List => {
+                dbg.list(load_addr, load_addr + 0x20)?;
+            }
+            DebuggerCommand::Invalid => {
+                show_usage();
+            }
+            DebuggerCommand::Quit => {
+                println!("Exiting...");
+                break;
+            }
+            DebuggerCommand::Repeat => panic!("not reachable"),
+        }
+    }
+    anyhow::Ok(dbg.get_register_snapshot())
+}
+
+fn create_cpu(args: &CliArgs) -> Result<(Box<dyn CpuController>, u16), Error> {
     let mut cpu = create(CpuType::MOS6502)?;
-    let mut load_addr: Option<u16> = None;
+    let load_addr: Option<u16>;
 
     if args.binary.is_some() {
         let file_name = args.binary.as_ref().unwrap();
@@ -53,12 +96,12 @@ fn run(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
         );
     } else {
         println!("No binary file specified, running empty program with single BRK instruction");
+        load_addr = Some(0xFFFE); // RESET vector
     }
-    // For now, start address == load address
-    Ok(cpu.run(load_addr)?)
+    Ok((cpu, load_addr.unwrap()))
 }
 
-fn print_snapshot(snapshot: CpuRegisterSnapshot) {
+fn print_register(snapshot: CpuRegisterSnapshot) {
     println!(
         "PC: {:04X}: A: {:02X} X: {:02X} Y: {:02X} S: {:08b} SP: {:04X}",
         snapshot.program_counter,
@@ -68,6 +111,9 @@ fn print_snapshot(snapshot: CpuRegisterSnapshot) {
         snapshot.status,
         snapshot.stack_pointer
     );
+}
+fn print_snapshot(snapshot: CpuRegisterSnapshot) {
+    print_register(snapshot.clone());
     println!(
         "Instructions: {}; Cycles: {}; Clock speed: {:.3} MHz",
         snapshot.accumulated_instructions,
