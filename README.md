@@ -24,19 +24,34 @@ My notes on and sources for [the journey to rust](/docs/Learning_Rust.md).
 ## Run via cargo
 
 ```bash
-cargo run --bin r6502 -- -h
-
 A 6502 emulator written in Rust
 
 Usage: r6502.exe [OPTIONS] [COMMAND]
 
 Arguments:
-  [COMMAND]  [default: run] [possible values: run, debug]
+  [COMMAND]
+          [default: run]
+          [possible values: run, debug]
 
 Options:
-  -f, --file <FILE>  Path to binary file to load and run
-  -h, --help         Print help
-  -V, --version      Print version
+  -b, --binary <BINARY>
+          Path to binary file to load and run
+
+  -f <FORMAT>
+          File format of the binary file to load
+
+          Possible values:
+          - bin: Plain binary with no header, little endian byte order
+          - prg: Like a bin file, but with a 16 byte header that indicates the load address
+
+  -l, --load-address <LOAD_ADDRESS>
+          Load address (u16) for binary to be loaded to and started with
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
 
 ```
 
@@ -44,10 +59,13 @@ With an empty program, the reset vector 0xFFFE points to a BRK instruction,
 halting the "program" after one instruction.
 
 ```bash
-cargo run --bin r6502 -- -h
+cargo run --bin r6502 --
+No binary file specified, running empty program with single BRK instruction
+
 PC: FFFE: A: 00 X: 00 Y: 00 S: 00000000 SP: 01FC
-Instructions: 1 Cycles: 7 Clock speed: 1.045 MHz
+Instructions: 1; Cycles: 7; Clock speed: 1.045 MHz
 Program finished after 6 μs:
+done.
 ```
 
 ## Feedback & Questions

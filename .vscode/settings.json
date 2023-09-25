@@ -13,6 +13,7 @@
     "Rustaceans",
     "rustfmt",
     "rustup",
+    "thiserror",
     "tlsv"
   ],
   "editor.defaultFormatter": "rust-lang.rust-analyzer",

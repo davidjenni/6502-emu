@@ -11,7 +11,6 @@ use crate::status_register::StatusRegister;
 use crate::CpuController;
 use crate::CpuError;
 use crate::CpuRegisterSnapshot;
-use std::fmt;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -101,21 +100,6 @@ impl CpuController for Cpu {
 impl Default for Cpu {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl fmt::Display for CpuError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CpuError::InvalidOpcode(opcode) => {
-                write!(f, "Invalid opcode: 0x{:02X}", opcode)
-            }
-            // CpuError::InvalidAddress(address) => {
-            //     write!(f, "Invalid address: 0x{:04X}", address)
-            // }
-            // ...
-            _ => write!(f, "CpuError"),
-        }
     }
 }
 

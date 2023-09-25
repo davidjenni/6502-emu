@@ -1,4 +1,5 @@
 use std::time;
+use thiserror::Error;
 
 use crate::cpu::Cpu;
 
@@ -9,13 +10,19 @@ mod memory;
 mod stack_pointer;
 mod status_register;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub enum CpuError {
+    #[error("CPU is not initialized")]
     NotInitialized,
+    #[error("PC address is out of bounds")]
     InvalidAddress,
+    #[error("addressing mode is not supported")]
     InvalidAddressingMode,
+    #[error("illegal op code instruction {0}")]
     InvalidOpcode(u8), // TODO: also capture PC
+    #[error("op code instruction expects an operand, but none was found")]
     MissingOperand,
+    #[error("op code instruction expects an operand, but none was found")]
     StackOverflow,
 }
 
