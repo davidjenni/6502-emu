@@ -4,7 +4,7 @@ use std::io::Write;
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum DebuggerCommand {
     Step,
-    List,
+    Disassemble,
     // Memory,
     Continue,
     Quit,
@@ -42,18 +42,18 @@ impl DebuggerLoop {
 
 pub fn show_usage() {
     println!("Usage:");
-    println!("  step (s)       - step one instruction");
-    println!("  list (l)       - list instructions");
-    println!("  continue (c)   - continue execution");
-    println!("  <empty line>   - repeat last command");
-    println!("  quit (q)       - quit debugger");
+    println!("  step (s)          - step one instruction");
+    println!("  disassemble (di)  - disassemble instructions from current PC");
+    println!("  continue (c)      - continue execution");
+    println!("  <empty line>      - repeat last command");
+    println!("  quit (q)          - quit debugger");
 }
 
 fn parse_command(input: &str) -> DebuggerCommand {
     let mut iter = input.split_whitespace();
     match iter.next() {
         Some("step") | Some("s") => DebuggerCommand::Step,
-        Some("list") | Some("l") => DebuggerCommand::List,
+        Some("disassemble") | Some("di") => DebuggerCommand::Disassemble,
         // Some("memory")  | Some("m")=> DebuggerCommand::Memory,
         Some("continue") | Some("c") => DebuggerCommand::Continue,
         Some("quit") | Some("q") => DebuggerCommand::Quit,

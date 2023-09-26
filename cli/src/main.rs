@@ -58,8 +58,11 @@ fn debug(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
                 let snapshot = dbg.run(None)?;
                 print_register(snapshot);
             }
-            DebuggerCommand::List => {
-                dbg.list(load_addr, load_addr + 0x20)?;
+            DebuggerCommand::Disassemble => {
+                let lines = dbg.disassemble(load_addr, 10)?;
+                for line in lines {
+                    println!("{}", line);
+                }
             }
             DebuggerCommand::Invalid => {
                 show_usage();

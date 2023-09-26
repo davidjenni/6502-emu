@@ -1,3 +1,4 @@
+use crate::disassembler::disassemble;
 use crate::{Cpu, CpuError, CpuRegisterSnapshot};
 
 pub trait Debugger<'a> {
@@ -6,7 +7,7 @@ pub trait Debugger<'a> {
     fn get_register_snapshot(&self) -> CpuRegisterSnapshot;
     fn step(&mut self) -> Result<CpuRegisterSnapshot, CpuError>;
     fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError>;
-    fn list(&self, start_addr: u16, end_addr: u16) -> Result<&[&str], CpuError>;
+    fn disassemble(&self, start_addr: u16, lines: usize) -> Result<Vec<String>, CpuError>;
 }
 
 pub struct DebuggerImpl<'a> {
@@ -40,15 +41,16 @@ impl<'a> Debugger<'_> for DebuggerImpl<'a> {
         Ok(self.cpu.get_register_snapshot())
     }
 
-    // fn list(&self, start_addr: u16, end_addr: u16) -> Result<&[&str], CpuError> {
-    fn list(&self, _: u16, _: u16) -> Result<&[&str], CpuError> {
-        // let mut addr = start_addr;
-        // while addr <= end_addr {
-        //     let opcode = self.memory.read(addr).unwrap();
-        //     let instruction = self.decode_instruction(opcode).unwrap();
-        //     println!("{:04X}  {:02X}  {}", addr, opcode, instruction);
-        //     addr += instruction.size();
-        // }
-        Ok(&["BRK"])
+    fn disassemble(&self, start_addr: u16, lines: usize) -> Result<Vec<String>, CpuError> {
+        let mut disassembled_lines = Vec::new();
+        let mut cnt = lines;
+        let mut next_addr = start_addr;
+        while next_addr != 0 && cnt > 0 {
+            let line: String;
+            (line, next_addr) = disassemble(self.cpu, next_addr)?;
+            disassembled_lines.push(line);
+            cnt -= 1;
+        }
+        Ok(disassembled_lines)
     }
 }

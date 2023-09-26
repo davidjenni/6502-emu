@@ -20,6 +20,13 @@ pub struct DecodedInstruction {
     pub cycles: u8,
 }
 
+impl DecodedInstruction {
+    pub fn get_mnemonic(&self) -> String {
+        // depends on OpCode::Display impl
+        self.opcode.to_string()
+    }
+}
+
 #[rustfmt::skip]
 pub fn decode(opcode: u8) -> Result<DecodedInstruction, CpuError> {
     // lookup table is generated via ../build.rs from a CSV file:
@@ -48,5 +55,17 @@ mod tests {
         assert_eq!(decoded.extra_bytes, 2);
         assert_eq!(decoded.cycles, 4);
         Ok(())
+    }
+
+    #[test]
+    fn decode_illegal_opcode() {
+        let decoded = decode(0xff);
+        assert!(decoded.is_err());
+    }
+
+    #[test]
+    fn get_mnemonic() {
+        let decoded = decode(0x00).unwrap();
+        assert_eq!(decoded.get_mnemonic(), "BRK");
     }
 }

@@ -7,6 +7,7 @@ pub use crate::debugger::Debugger;
 mod address_bus;
 mod cpu;
 mod debugger;
+mod disassembler;
 mod engine;
 mod memory;
 mod stack_pointer;
