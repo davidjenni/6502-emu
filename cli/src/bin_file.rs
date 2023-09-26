@@ -3,7 +3,7 @@ use std::io;
 use crate::args::FileFormat;
 
 pub struct BinFileBuffer {
-    pub start_addr: Option<u16>,
+    pub load_addr: Option<u16>,
     pub data: Vec<u8>,
 }
 
@@ -50,11 +50,11 @@ fn read_program(
 
     match format {
         FileFormat::Bin => Ok(BinFileBuffer {
-            start_addr: None,
+            load_addr: None,
             data: buffer,
         }),
         FileFormat::Prg => Ok(BinFileBuffer {
-            start_addr: Some(u16::from_le_bytes([buffer[0], buffer[1]])),
+            load_addr: Some(u16::from_le_bytes([buffer[0], buffer[1]])),
             data: buffer[2..].to_vec(),
         }),
     }

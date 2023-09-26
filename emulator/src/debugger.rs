@@ -4,6 +4,7 @@ use crate::{Cpu, CpuError, CpuRegisterSnapshot};
 pub trait Debugger<'a> {
     // fn reset(&mut self) -> Result<(), CpuError>;
     fn set_pc(&mut self, addr: u16) -> Result<(), CpuError>;
+    fn get_pc(&self) -> u16;
     fn get_register_snapshot(&self) -> CpuRegisterSnapshot;
     fn step(&mut self) -> Result<CpuRegisterSnapshot, CpuError>;
     fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError>;
@@ -25,6 +26,10 @@ impl<'a> Debugger<'_> for DebuggerImpl<'a> {
     fn set_pc(&mut self, addr: u16) -> Result<(), CpuError> {
         self.cpu.set_pc(addr)?;
         Ok(())
+    }
+
+    fn get_pc(&self) -> u16 {
+        self.cpu.get_pc()
     }
 
     fn get_register_snapshot(&self) -> CpuRegisterSnapshot {

@@ -68,6 +68,39 @@ Program finished after 6 μs:
 done.
 ```
 
+Debugging with step and disassembly listing is also possible.
+Note that addresses when starting the r6402 CLI still need to be entered decimal: 512 == 0x0200
+
+```bash
+cargo run --bin r6502 -- debug -b ./cli/tests/assets/euclid_gcd.prg -s 512
+Loaded 476 bytes at address 0040
+PC: 0200: A: 00 X: 00 Y: 00 S: 00000000 SP: 01FF
+(dbg)> di
+  0200 LDA $40
+  0202 SEC
+  0203 SBC $41
+  0205 BEQ $12 (0219)
+  0207 BMI $05 (020E)
+  0209 STA $40
+  020B JMP $0202
+  020E LDX $40
+  0210 LDY $41
+  0212 STX $41
+(dbg)>
+(dbg)> s
+PC: 0202: A: 78 X: 00 Y: 00 S: 00000000 SP: 01FF
+(dbg)>
+PC: 0203: A: 78 X: 00 Y: 00 S: 00000001 SP: 01FF
+(dbg)> h
+Usage:
+  step (s)          - step one instruction
+  disassemble (di)  - disassemble instructions from current PC
+  continue (c)      - continue execution
+  <empty line>      - repeat last command
+  quit (q)          - quit debugger
+(dbg)>
+```
+
 ## Feedback & Questions
 
 Please use the issues tracker in the home repo: <https://github.com/davidjenni/6502-emu/issues>

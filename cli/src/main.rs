@@ -33,17 +33,16 @@ fn main() {
 }
 
 fn run(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
-    let (mut cpu, load_addr) = create_cpu(args)?;
+    let (mut cpu, start_addr) = create_cpu(args)?;
 
-    // For now, start address == load address
-    anyhow::Ok(cpu.run(Some(load_addr))?)
+    anyhow::Ok(cpu.run(Some(start_addr))?)
 }
 
 fn debug(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
-    let (mut cpu, load_addr) = create_cpu(args)?;
+    let (mut cpu, start_addr) = create_cpu(args)?;
 
     let mut dbg = cpu.as_debugger();
-    dbg.set_pc(load_addr)?;
+    dbg.set_pc(start_addr)?;
 
     print_register(dbg.get_register_snapshot());
     let mut dbg_loop = DebuggerLoop::new();
@@ -59,9 +58,9 @@ fn debug(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
                 print_register(snapshot);
             }
             DebuggerCommand::Disassemble => {
-                let lines = dbg.disassemble(load_addr, 10)?;
+                let lines = dbg.disassemble(dbg.get_pc(), 10)?;
                 for line in lines {
-                    println!("{}", line);
+                    println!("  {}", line);
                 }
             }
             DebuggerCommand::Invalid => {
@@ -85,23 +84,27 @@ fn create_cpu(args: &CliArgs) -> Result<(Box<dyn CpuController>, u16), Error> {
         let file_name = args.binary.as_ref().unwrap();
         let b = bin_file::load_program(file_name, None)
             .with_context(|| format!("Error loading binary file '{}'", file_name))?;
-        load_addr = b.start_addr.or(args.load_address);
+        load_addr = b.load_addr.or(args.load_address);
         if load_addr.is_none() {
             return Err(anyhow::anyhow!(
-                "Start address not specified, and cannot be inferred from file format"
+                "Load address not specified, and cannot be inferred from file format"
             ));
         }
-        cpu.load_program(load_addr.unwrap(), &b.data)?;
-        println!(
-            "Loaded {} bytes at address {:04X}",
-            b.data.len(),
-            load_addr.unwrap()
-        );
+        let load_addr = load_addr.unwrap();
+        cpu.load_program(load_addr, &b.data)?;
+        println!("Loaded {} bytes at address {:04X}", b.data.len(), load_addr);
     } else {
         println!("No binary file specified, running empty program with single BRK instruction");
         load_addr = Some(0xFFFE); // RESET vector
     }
-    Ok((cpu, load_addr.unwrap()))
+
+    let start_addr = if args.start_address.is_some() {
+        args.start_address.unwrap()
+    } else {
+        load_addr.unwrap()
+    };
+    println!("Start execution at address {:04X}", start_addr);
+    Ok((cpu, start_addr))
 }
 
 fn print_register(snapshot: CpuRegisterSnapshot) {

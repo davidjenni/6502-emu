@@ -112,6 +112,10 @@ impl Cpu {
         self.address_bus.set_pc(addr)
     }
 
+    pub fn get_pc(&self) -> u16 {
+        self.address_bus.get_pc()
+    }
+
     pub fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
         self.memory.load_program(start_addr, program)
     }
