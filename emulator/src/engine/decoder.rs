@@ -27,3 +27,26 @@ pub fn decode(opcode: u8) -> Result<DecodedInstruction, CpuError> {
     // see also compile output for actual path
     include!(concat!(env!("OUT_DIR"), "/opcodes_mos6502.rs"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decode_legal_opcode() -> Result<(), CpuError> {
+        // BRK
+        let decoded = decode(0x00)?;
+        assert_eq!(decoded.opcode, OpCode::BRK);
+        assert_eq!(decoded.mode, AddressingMode::Implied);
+        assert_eq!(decoded.extra_bytes, 0);
+        assert_eq!(decoded.cycles, 7);
+
+        // STY
+        let decoded = decode(0x8c)?;
+        assert_eq!(decoded.opcode, OpCode::STY);
+        assert_eq!(decoded.mode, AddressingMode::Absolute);
+        assert_eq!(decoded.extra_bytes, 2);
+        assert_eq!(decoded.cycles, 4);
+        Ok(())
+    }
+}

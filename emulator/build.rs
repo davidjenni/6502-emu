@@ -54,7 +54,7 @@ fn convert_csv_to_opcodes(opcodes_file: &Path, out_file_path: &Path) -> io::Resu
                 mnemonic.to_ascii_uppercase(),
                 to_addressing_mode(&mode),
                 mnemonic.to_ascii_lowercase(),
-                bytes.parse::<u8>().unwrap(),   // TODO need better error handling for number parsing
+                bytes.parse::<u8>().unwrap() - 1,   // TODO need better error handling for number parsing
                 cycles.parse::<u8>().unwrap(),
             )?;
 
