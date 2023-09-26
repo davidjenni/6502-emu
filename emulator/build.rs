@@ -13,7 +13,16 @@ fn main() -> io::Result<()> {
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_file_path = Path::new(&out_dir).join("opcodes_mos6502.rs");
-    let mut out_file = LineWriter::new(File::create(&out_file_path)?);
+
+    convert_csv_to_opcodes(&opcodes_file, &out_file_path)?;
+
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=src/engine/opcodes-mos6502.csv");
+    Ok(())
+}
+
+fn convert_csv_to_opcodes(opcodes_file: &Path, out_file_path: &Path) -> io::Result<()> {
+    let mut out_file = LineWriter::new(File::create(out_file_path)?);
     println!("cargo:warning=generating: {}...", out_file_path.display());
 
     out_file.write_all(b"    match opcode{\n")?;
@@ -21,24 +30,29 @@ fn main() -> io::Result<()> {
     let mut line_cnt = 0;
     if let Ok(lines) = read_lines(opcodes_file.clone()) {
         for line in lines {
-            let cells: Vec<String> = line?.split(',').map(|s| s.trim().to_string()).collect();
+            const COLUMNS: usize = 5;
+            //   opcode,mnemonic,addressing mode,bytes,cycles,flags
+            //   0x69,ADC,IMM,2,2,<flags>
+            let [hex_opcode, mnemonic, mode, bytes, cycles] = <[String; COLUMNS]>::try_from(
+                line?
+                    .split(',')
+                    .map(String::from)
+                    .take(COLUMNS)
+                    .collect::<Vec<String>>(),
+            )
+            .unwrap();
             // skip header line
-            if cells[0] == *"opcode" {
+            if hex_opcode == *"opcode" {
                 continue;
             }
 
-            // opcode,mnemonic,addressing mode,bytes,cycles,flags
-            // 0x69,ADC,IMM,2,2,<flags>
-
-            let (hex_opcode, mnemonic, mode, bytes, cycles) =
-                (&cells[0], &cells[1], &cells[2], &cells[3], &cells[4]);
-
             writeln!(
                 out_file,
+                //     0x69 => Ok(DecodedInstruction { opcode: OpCode::ADC, mode: AddressingMode::Immediate, execute: execute_adc, extra_bytes: 2, cycles: 2, }),
                 "        {} => Ok(DecodedInstruction {{ opcode: OpCode::{}, mode: AddressingMode::{}, execute: execute_{}, extra_bytes: {}, cycles: {}, }}),",
                 hex_opcode,
                 mnemonic.to_ascii_uppercase(),
-                to_addressing_mode(mode),
+                to_addressing_mode(&mode),
                 mnemonic.to_ascii_lowercase(),
                 bytes.parse::<u8>().unwrap(),   // TODO need better error handling for number parsing
                 cycles.parse::<u8>().unwrap(),
@@ -61,8 +75,6 @@ fn main() -> io::Result<()> {
         line_cnt,
         opcodes_file.display()
     );
-    println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=src/engine/opcodes-mos6502.csv");
     Ok(())
 }
 
