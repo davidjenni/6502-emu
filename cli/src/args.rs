@@ -31,6 +31,10 @@ pub struct CliArgs {
     pub format: Option<FileFormat>,
 
     #[arg(short, long, required = false, value_parser = clap::value_parser!(u16))]
-    /// Load address (u16) for binary to be loaded to and started with
+    /// Load address (u16) for binary to be loaded to (inferred for .prg); if no start_addr it is also used as start address
     pub load_address: Option<u16>,
+
+    #[arg(short, long, required = false, value_parser = clap::value_parser!(u16))]
+    /// Start address (u16) for binary to be started with
+    pub start_address: Option<u16>,
 }

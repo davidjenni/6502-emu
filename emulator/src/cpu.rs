@@ -67,12 +67,12 @@ impl CpuController for Cpu {
     }
 
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
-        self.memory.load_program(start_addr, program)
+        self.load_program(start_addr, program)
     }
 
     // TODO: move to debugger trait and impl
     fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {
-        self.memory.read(address)
+        self.get_byte_at(address)
     }
 
     // TODO: move to debugger trait and impl
@@ -110,6 +110,18 @@ impl Cpu {
 
     pub fn set_pc(&mut self, addr: u16) -> Result<(), CpuError> {
         self.address_bus.set_pc(addr)
+    }
+
+    pub fn get_pc(&self) -> u16 {
+        self.address_bus.get_pc()
+    }
+
+    pub fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
+        self.memory.load_program(start_addr, program)
+    }
+
+    pub fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {
+        self.memory.read(address)
     }
 
     pub fn run(&mut self, start_addr: Option<u16>) -> Result<(), CpuError> {

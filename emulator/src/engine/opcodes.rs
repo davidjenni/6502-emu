@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum OpCode {
@@ -57,4 +59,10 @@ pub enum OpCode {
     TXA, // Transfer Index X to Accumulator
     TXS, // Transfer Index X to Stack pointer
     TYA, // Transfer Index Y to Accumulator
+}
+
+impl fmt::Display for OpCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
 }
