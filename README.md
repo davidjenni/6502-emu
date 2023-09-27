@@ -1,6 +1,7 @@
 # 6502 CPU emulator in rust
 
 [![CI](https://github.com/davidjenni/6502-emu/actions/workflows/CI.yml/badge.svg)](https://github.com/davidjenni/6502-emu/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/davidjenni/6502-emu/graph/badge.svg?token=K65NNITM7V)](https://codecov.io/gh/davidjenni/6502-emu)
 
 ![MOS6502 in a 40 pin plastic package](/assets/MOS%206502%20DIP40-small.jpg)
 ![MOS6502 die](/assets/MOS_6502_die-small.jpg)

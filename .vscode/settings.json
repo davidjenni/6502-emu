@@ -3,6 +3,7 @@
     "automock",
     "bitfield",
     "clippy",
+    "codecov",
     "DIZC",
     "LLDB",
     "mockall",
