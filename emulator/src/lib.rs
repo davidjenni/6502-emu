@@ -1,11 +1,11 @@
-use cpu_controller::CpuControllerImpl;
+use cpu::CpuControllerImpl;
 use std::time;
 use thiserror::Error;
 
 use crate::cpu_impl::CpuImpl;
 
 mod address_bus;
-mod cpu_controller;
+mod cpu;
 mod cpu_impl;
 mod disassembler;
 mod engine;
@@ -44,7 +44,7 @@ pub struct CpuRegisterSnapshot {
     pub approximate_clock_speed: f64,
 }
 
-pub trait CpuController {
+pub trait Cpu {
     fn reset(&mut self) -> Result<(), CpuError>;
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
 
@@ -64,6 +64,6 @@ pub enum CpuType {
     MOS6502,
 }
 
-pub fn create(kind: CpuType) -> Result<Box<dyn CpuController>, CpuError> {
+pub fn create_cpu(kind: CpuType) -> Result<Box<dyn Cpu>, CpuError> {
     CpuControllerImpl::create(kind)
 }

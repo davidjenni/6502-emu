@@ -1,5 +1,5 @@
 use crate::disassembler::disassemble;
-use crate::{CpuController, CpuType};
+use crate::{Cpu, CpuType};
 use crate::{CpuError, CpuImpl, CpuRegisterSnapshot};
 
 pub struct CpuControllerImpl {
@@ -7,7 +7,7 @@ pub struct CpuControllerImpl {
 }
 
 impl CpuControllerImpl {
-    pub fn create(kind: CpuType) -> Result<Box<dyn CpuController>, CpuError> {
+    pub fn create(kind: CpuType) -> Result<Box<dyn Cpu>, CpuError> {
         let mut cpu = match kind {
             CpuType::MOS6502 => CpuControllerImpl {
                 cpu: CpuImpl::default(),
@@ -18,7 +18,7 @@ impl CpuControllerImpl {
     }
 }
 
-impl CpuController for CpuControllerImpl {
+impl Cpu for CpuControllerImpl {
     fn reset(&mut self) -> Result<(), CpuError> {
         self.cpu.reset()
     }

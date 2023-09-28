@@ -1,10 +1,10 @@
 // See algo and assembly code in euclid_gcd.md
 
-use mos6502_emulator::{create, CpuError, CpuType};
+use mos6502_emulator::{create_cpu, CpuError, CpuType};
 
 #[test]
 fn run_gcd_euclid() -> Result<(), CpuError> {
-    let mut cpu = create(CpuType::MOS6502).unwrap();
+    let mut cpu = create_cpu(CpuType::MOS6502).unwrap();
     cpu.load_program(
         0x0200,
         &[

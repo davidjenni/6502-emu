@@ -1,15 +1,15 @@
-use mos6502_emulator::{create, CpuError, CpuType};
+use mos6502_emulator::{create_cpu, CpuError, CpuType};
 
 #[test]
 fn create_default_cpu() -> Result<(), CpuError> {
-    let mut cpu = create(CpuType::MOS6502)?;
+    let mut cpu = create_cpu(CpuType::MOS6502)?;
     cpu.reset()?;
     Ok(())
 }
 
 #[test]
 fn run_simple_program() -> Result<(), CpuError> {
-    let mut cpu = create(CpuType::MOS6502).unwrap();
+    let mut cpu = create_cpu(CpuType::MOS6502).unwrap();
     assert!(cpu
         .load_program(
             0x0600,
@@ -30,7 +30,7 @@ fn run_simple_program() -> Result<(), CpuError> {
 
 #[test]
 fn run_empty_program_stops_at_irq() -> Result<(), CpuError> {
-    let mut cpu = create(CpuType::MOS6502).unwrap();
+    let mut cpu = create_cpu(CpuType::MOS6502).unwrap();
     let reg_snapshot = cpu.run(None)?;
     // PC should point at IRQ vector:
     assert_eq!(reg_snapshot.program_counter, 0xFFFE);

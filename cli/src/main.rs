@@ -10,7 +10,7 @@ use clap::Parser;
 
 use args::CliArgs;
 use debug_loop::{show_usage, DebuggerCommand, DebuggerLoop};
-use mos6502_emulator::{create, CpuController, CpuRegisterSnapshot, CpuType};
+use mos6502_emulator::{create_cpu, Cpu, CpuRegisterSnapshot, CpuType};
 
 fn main() {
     let args = CliArgs::parse();
@@ -33,13 +33,13 @@ fn main() {
 }
 
 fn run(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
-    let (mut cpu, start_addr) = create_cpu(args)?;
+    let (mut cpu, start_addr) = init_cpu(args)?;
 
     anyhow::Ok(cpu.run(Some(start_addr))?)
 }
 
 fn debug(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
-    let (mut cpu, start_addr) = create_cpu(args)?;
+    let (mut cpu, start_addr) = init_cpu(args)?;
 
     cpu.set_pc(start_addr)?;
 
@@ -75,8 +75,8 @@ fn debug(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
     anyhow::Ok(cpu.get_register_snapshot())
 }
 
-fn create_cpu(args: &CliArgs) -> Result<(Box<dyn CpuController>, u16), Error> {
-    let mut cpu = create(CpuType::MOS6502)?;
+fn init_cpu(args: &CliArgs) -> Result<(Box<dyn Cpu>, u16), Error> {
+    let mut cpu = create_cpu(CpuType::MOS6502)?;
     let load_addr: Option<u16>;
 
     if args.binary.is_some() {
