@@ -1,11 +1,11 @@
-use crate::cpu::{AddressingMode, Cpu};
+use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::CpuError;
 
 // Arithmetic operations:
 
 // ADC:    A + M + C -> A, C
 // status: NV ...ZC
-pub fn execute_adc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_adc(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if cpu.status.decimal_mode() {
         todo!("decimal mode not implemented");
     }
@@ -24,7 +24,7 @@ pub fn execute_adc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // SBC:    A - M - C̅ -> A
 // status: NV ...ZC
-pub fn execute_sbc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_sbc(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if cpu.status.decimal_mode() {
         todo!("decimal mode not implemented");
     }
@@ -64,7 +64,7 @@ fn is_overflow(a: u8, b: u8, result_high_bit: i16) -> bool {
 
 // AND:    A AND M -> A
 // status: N. ...Z.
-pub fn execute_and(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_and(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let operand = cpu.get_effective_operand(mode)?;
     cpu.accumulator &= operand;
     cpu.status.update_from(cpu.accumulator);
@@ -73,7 +73,7 @@ pub fn execute_and(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // EOR:    A EOR M -> A
 // status: N. ...Z.
-pub fn execute_eor(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_eor(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let operand = cpu.get_effective_operand(mode)?;
     cpu.accumulator ^= operand;
     cpu.status.update_from(cpu.accumulator);
@@ -82,7 +82,7 @@ pub fn execute_eor(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // ORA:    A OR M -> A
 // status: N. ...Z.
-pub fn execute_ora(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_ora(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let operand = cpu.get_effective_operand(mode)?;
     cpu.accumulator |= operand;
     cpu.status.update_from(cpu.accumulator);
@@ -94,7 +94,7 @@ pub fn execute_ora(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // ASL:    C <- [76543210] <- 0
 // status: N. ...ZC
 // affects either accumulator or memory (read/modify/write)
-pub fn execute_asl(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_asl(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     read_modify_write(mode, cpu, |operand, _| {
         let carry = operand & 0x80 != 0;
         let result = operand << 1;
@@ -106,7 +106,7 @@ pub fn execute_asl(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // LSR:    0 -> [76543210] <- C
 // status: N. ...ZC
 // affects either accumulator or memory (read/modify/write)
-pub fn execute_lsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_lsr(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     read_modify_write(mode, cpu, |operand, _| {
         let carry = operand & 0x01 != 0;
         let result = operand >> 1;
@@ -118,7 +118,7 @@ pub fn execute_lsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // ROL:    C <- [76543210] <- C
 // status: N. ...ZC
 // affects either accumulator or memory (read/modify/write)
-pub fn execute_rol(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_rol(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     read_modify_write(mode, cpu, |operand, old_carry| {
         let carry_mask = if old_carry { 0x01 } else { 0x00 };
         let new_carry = operand & 0x80 != 0;
@@ -131,7 +131,7 @@ pub fn execute_rol(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // ROR:    C -> [76543210] -> C
 // status: N. ...ZC
 // affects either accumulator or memory (read/modify/write)
-pub fn execute_ror(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_ror(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     read_modify_write(mode, cpu, |operand, old_carry| {
         let carry_mask = if old_carry { 0x80 } else { 0x00 };
         let new_carry = operand & 0x01 != 0;
@@ -146,7 +146,7 @@ pub fn execute_ror(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // DEC: Decrement memory by one
 // M - 1 -> M
 // status: N. ...Z.
-pub fn execute_dec(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_dec(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     read_modify_write(mode, cpu, |operand, _| (operand.wrapping_sub(1), false))?;
     Ok(())
 }
@@ -154,7 +154,7 @@ pub fn execute_dec(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // DEX: Decrement index X by one
 // X - 1 -> X
 // status: N. ...Z.
-pub fn execute_dex(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_dex(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -166,7 +166,7 @@ pub fn execute_dex(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // DEY: Decrement index Y by one
 // Y - 1 -> Y
 // status: N. ...Z.
-pub fn execute_dey(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_dey(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -178,7 +178,7 @@ pub fn execute_dey(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // INC: Increment memory by one
 // M + 1 -> M
 // status: N. ...Z.
-pub fn execute_inc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_inc(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     read_modify_write(mode, cpu, |operand, _| (operand.wrapping_add(1), false))?;
     Ok(())
 }
@@ -186,7 +186,7 @@ pub fn execute_inc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // INX: Increment index X by one
 // X + 1 -> X
 // status: N. ...Z.
-pub fn execute_inx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_inx(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -198,7 +198,7 @@ pub fn execute_inx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // INY: Increment index Y by one
 // Y + 1 -> Y
 // status: N. ...Z.
-pub fn execute_iny(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_iny(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -210,7 +210,7 @@ pub fn execute_iny(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // function to handle the divergent accumulator vs in-memory read prolog and write sequel
 fn read_modify_write(
     mode: AddressingMode,
-    cpu: &mut Cpu,
+    cpu: &mut CpuImpl,
     f: fn(u8, bool) -> (u8, bool),
 ) -> Result<(), CpuError> {
     // determine read source for operand:
@@ -243,7 +243,7 @@ mod tests {
     const NEXT_PC: u16 = 0x0200;
 
     // create a Cpu instance and write operand value into zero page address $00
-    fn setup_cpu(operand: u8, carry: bool) -> Result<Cpu, CpuError> {
+    fn setup_cpu(operand: u8, carry: bool) -> Result<CpuImpl, CpuError> {
         let mut cpu = create_cpu()?;
         cpu.memory.write(0x0000, operand)?;
         // idiosyncrasy of 6502:
@@ -252,7 +252,7 @@ mod tests {
         Ok(cpu)
     }
 
-    fn setup_cpu_zero_page(operand: u8) -> Result<Cpu, CpuError> {
+    fn setup_cpu_zero_page(operand: u8) -> Result<CpuImpl, CpuError> {
         let mut cpu = create_cpu()?;
         cpu.memory.write(ZERO_PAGE_ADDR, operand)?;
         cpu.memory.write(NEXT_PC, ZERO_PAGE_ADDR as u8)?;
@@ -260,8 +260,8 @@ mod tests {
         Ok(cpu)
     }
 
-    fn create_cpu() -> Result<Cpu, CpuError> {
-        let mut cpu = Cpu::default();
+    fn create_cpu() -> Result<CpuImpl, CpuError> {
+        let mut cpu = CpuImpl::default();
         cpu.address_bus.set_pc(0x0000)?;
         Ok(cpu)
     }

@@ -2,8 +2,6 @@ use std::time::{Duration, Instant};
 
 use crate::address_bus::AddressBusImpl;
 use crate::address_bus::{AddressBus, SystemVector};
-use crate::debugger::{Debugger, DebuggerImpl};
-// use crate::debugger::Debugger;
 use crate::engine::decoder;
 use crate::engine::decoder::DecodedInstruction;
 use crate::engine::opcodes::OpCode;
@@ -12,9 +10,7 @@ use crate::memory::MemoryImpl;
 use crate::stack_pointer::StackPointer;
 use crate::stack_pointer::StackPointerImpl;
 use crate::status_register::StatusRegister;
-use crate::CpuController;
 use crate::CpuError;
-use crate::CpuRegisterSnapshot;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AddressingMode {
@@ -34,7 +30,7 @@ pub enum AddressingMode {
 }
 
 #[derive(Debug)]
-pub struct Cpu {
+pub struct CpuImpl {
     pub accumulator: u8,
     pub index_x: u8,
     pub index_y: u8,
@@ -51,49 +47,15 @@ pub struct Cpu {
     approximate_clock_speed: f64,
 }
 
-impl CpuController for Cpu {
-    fn reset(&mut self) -> Result<(), CpuError> {
-        self.stack.reset()?;
-        self.address_bus.set_pc(SystemVector::Reset as u16)?;
-        self.accumulated_cycles = 0;
-        self.accumulated_instructions = 0;
-        Ok(())
-    }
-
-    fn run(&mut self, start_addr: Option<u16>) -> Result<CpuRegisterSnapshot, CpuError> {
-        // delegate implementation to Cpu
-        self.run(start_addr)?;
-        Ok(self.get_register_snapshot())
-    }
-
-    fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
-        self.load_program(start_addr, program)
-    }
-
-    // TODO: move to debugger trait and impl
-    fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {
-        self.get_byte_at(address)
-    }
-
-    // TODO: move to debugger trait and impl
-    fn set_byte_at(&mut self, address: u16, value: u8) -> Result<(), CpuError> {
-        self.memory.write(address, value)
-    }
-
-    fn as_debugger<'a>(&'a mut self) -> Box<dyn Debugger<'a> + 'a> {
-        DebuggerImpl::new(self)
-    }
-}
-
-impl Default for Cpu {
+impl Default for CpuImpl {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Cpu {
-    pub fn new() -> Cpu {
-        Cpu {
+impl CpuImpl {
+    pub fn new() -> CpuImpl {
+        CpuImpl {
             accumulator: 0,
             index_x: 0,
             index_y: 0,
@@ -108,20 +70,27 @@ impl Cpu {
         }
     }
 
-    pub fn set_pc(&mut self, addr: u16) -> Result<(), CpuError> {
-        self.address_bus.set_pc(addr)
-    }
+    pub fn reset(&mut self) -> Result<(), CpuError> {
+        self.stack.reset()?;
 
-    pub fn get_pc(&self) -> u16 {
-        self.address_bus.get_pc()
+        self.address_bus.set_pc(SystemVector::Reset as u16)?;
+
+        self.accumulated_cycles = 0;
+        self.accumulated_instructions = 0;
+
+        Ok(())
     }
 
     pub fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
         self.memory.load_program(start_addr, program)
     }
 
-    pub fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {
-        self.memory.read(address)
+    pub fn set_pc(&mut self, addr: u16) -> Result<(), CpuError> {
+        self.address_bus.set_pc(addr)
+    }
+
+    pub fn get_pc(&self) -> u16 {
+        self.address_bus.get_pc()
     }
 
     pub fn run(&mut self, start_addr: Option<u16>) -> Result<(), CpuError> {
@@ -164,6 +133,14 @@ impl Cpu {
             accumulated_instructions: self.accumulated_instructions,
             approximate_clock_speed: self.approximate_clock_speed,
         }
+    }
+
+    pub fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {
+        self.memory.read(address)
+    }
+
+    pub fn set_byte_at(&mut self, address: u16, value: u8) -> Result<(), CpuError> {
+        self.memory.write(address, value)
     }
 
     fn fetch_and_decode(&mut self) -> Result<DecodedInstruction, CpuError> {
@@ -254,8 +231,8 @@ mod tests {
     const OP_CODE: u8 = 0xa5; // arbitrary opcode used for unit testing
     const EXPECTED: u8 = 42;
 
-    fn setup_test_cpu(program: &[u8]) -> Result<Cpu, CpuError> {
-        let mut cpu = Cpu::default();
+    fn setup_test_cpu(program: &[u8]) -> Result<CpuImpl, CpuError> {
+        let mut cpu = CpuImpl::default();
 
         cpu.load_program(START_ADDR, program)?;
         cpu.address_bus.set_pc(START_ADDR)?;
@@ -272,7 +249,7 @@ mod tests {
         Ok(())
     }
 
-    fn assert_final_pc(cpu: &Cpu, delta: u16) {
+    fn assert_final_pc(cpu: &CpuImpl, delta: u16) {
         assert_eq!(cpu.address_bus.get_pc(), START_ADDR + delta);
     }
 
@@ -280,7 +257,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "InvalidAddressingMode")]
     fn get_effective_operand_implied() {
-        let mut cpu = Cpu::default();
+        let mut cpu = CpuImpl::default();
 
         cpu.get_effective_operand(AddressingMode::Implied).unwrap();
     }

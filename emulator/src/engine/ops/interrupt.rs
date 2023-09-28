@@ -1,10 +1,10 @@
 use crate::address_bus::SystemVector;
-use crate::cpu::{AddressingMode, Cpu};
+use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::CpuError;
 
 // BRK:    Force break
 // status: NV ...ZC
-pub fn execute_brk(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_brk(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -25,7 +25,7 @@ pub fn execute_brk(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // RTI:    Return from interrupt
 // pull PC, add 1, put result in PC
 // status: NV bD.ZC
-pub fn execute_rti(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_rti(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -43,7 +43,7 @@ mod tests {
     #[test]
     fn brk() -> Result<(), CpuError> {
         // assert_eq!(cpu.address_bus.get_pc(), 0xFFFE);
-        let mut cpu = Cpu::default();
+        let mut cpu = CpuImpl::default();
         cpu.status.set_carry(true);
         cpu.status.set_negative(true);
         cpu.address_bus.set_pc(0x0123)?;
@@ -56,7 +56,7 @@ mod tests {
 
     #[test]
     fn rti() -> Result<(), CpuError> {
-        let mut cpu = Cpu::default();
+        let mut cpu = CpuImpl::default();
         cpu.stack.push_word(cpu.memory.as_mut(), 0x1234)?;
         cpu.stack.push_byte(cpu.memory.as_mut(), 0b1101_1011)?;
 
