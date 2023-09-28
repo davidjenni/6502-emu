@@ -1,11 +1,11 @@
-use crate::cpu::{AddressingMode, Cpu};
+use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::CpuError;
 
 // Branch operations:
 
 // BCC:    Branch on Carry clear (C = 0)
 // status: n/c
-pub fn execute_bcc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_bcc(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if !cpu.status.carry() {
         cpu.address_bus.set_pc(effective_address)?;
@@ -15,7 +15,7 @@ pub fn execute_bcc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BCS:    Branch on Carry set (C = 1)
 // status: n/c
-pub fn execute_bcs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_bcs(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if cpu.status.carry() {
         cpu.address_bus.set_pc(effective_address)?;
@@ -25,7 +25,7 @@ pub fn execute_bcs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BEQ:    Branch on result zero (Z = 1)
 // status: n/c
-pub fn execute_beq(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_beq(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if cpu.status.zero() {
         cpu.address_bus.set_pc(effective_address)?;
@@ -35,7 +35,7 @@ pub fn execute_beq(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BMI:    Branch on result minus (N = 1)
 // status: n/c
-pub fn execute_bmi(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_bmi(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if cpu.status.negative() {
         cpu.address_bus.set_pc(effective_address)?;
@@ -45,7 +45,7 @@ pub fn execute_bmi(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BNE:    Branch on result non zero (Z = 0)
 // status: n/c
-pub fn execute_bne(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_bne(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if !cpu.status.zero() {
         cpu.address_bus.set_pc(effective_address)?;
@@ -55,7 +55,7 @@ pub fn execute_bne(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BPL:    Branch on result plus (N = 0)
 // status: n/c
-pub fn execute_bpl(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_bpl(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if !cpu.status.negative() {
         cpu.address_bus.set_pc(effective_address)?;
@@ -65,7 +65,7 @@ pub fn execute_bpl(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BVC:    Branch on Overflow clear (V = 1)
 // status: n/c
-pub fn execute_bvc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_bvc(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if !cpu.status.overflow() {
         cpu.address_bus.set_pc(effective_address)?;
@@ -75,7 +75,7 @@ pub fn execute_bvc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // BVS:    Branch on Overflow set (V = 1)
 // status: n/c
-pub fn execute_bvs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_bvs(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     if cpu.status.overflow() {
         cpu.address_bus.set_pc(effective_address)?;
@@ -89,7 +89,7 @@ pub fn execute_bvs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // (PC + 1) -> PCL
 // (PC + 2) -> PCH
 // status: n/c
-pub fn execute_jmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_jmp(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     cpu.address_bus.set_pc(effective_address)?;
     Ok(())
@@ -100,7 +100,7 @@ pub fn execute_jmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // (PC + 1) -> PCL
 // (PC + 2) -> PCH
 // status: n/c
-pub fn execute_jsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_jsr(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let return_address = cpu.address_bus.get_pc() - 1;
     // see 6502 programming manual, section 8,1 pg 106:
@@ -113,7 +113,7 @@ pub fn execute_jsr(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // RTS:    Return from sub routine
 // pull PC, add 1, put result in PC
 // status: n/c
-pub fn execute_rts(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_rts(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn rts() -> Result<(), CpuError> {
-        let mut cpu = Cpu::default();
+        let mut cpu = CpuImpl::default();
         cpu.stack.push_word(cpu.memory.as_mut(), 0x1234)?;
         execute_rts(AddressingMode::Implied, &mut cpu)?;
         // see execute_jsr: pushed PC is one byte short of the actual return address
@@ -221,15 +221,15 @@ mod tests {
 
     const NEXT_PC: u16 = 0x0123;
 
-    fn create_cpu_branch_test(relative_offset: u8) -> Result<Cpu, CpuError> {
-        let mut cpu = Cpu::default();
+    fn create_cpu_branch_test(relative_offset: u8) -> Result<CpuImpl, CpuError> {
+        let mut cpu = CpuImpl::default();
         cpu.memory.write(NEXT_PC, relative_offset).unwrap();
         cpu.address_bus.set_pc(NEXT_PC)?;
         Ok(cpu)
     }
 
-    fn create_cpu_jump(address: u16) -> Result<Cpu, CpuError> {
-        let mut cpu = Cpu::default();
+    fn create_cpu_jump(address: u16) -> Result<CpuImpl, CpuError> {
+        let mut cpu = CpuImpl::default();
         // JMP has 2 byte operand, moving PC 1 byte further:
         cpu.memory.write_word(NEXT_PC, address)?;
         cpu.address_bus.set_pc(NEXT_PC)?;
@@ -237,7 +237,7 @@ mod tests {
     }
 
     fn assert_branching(
-        exec: fn(AddressingMode, &mut Cpu) -> Result<(), CpuError>,
+        exec: fn(AddressingMode, &mut CpuImpl) -> Result<(), CpuError>,
         set_flag: fn(&mut StatusRegister, bool),
     ) -> Result<(), CpuError> {
         const POS_OFFSET: u8 = 0x12;

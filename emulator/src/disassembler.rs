@@ -1,6 +1,6 @@
-use crate::{cpu::AddressingMode, engine::decoder, Cpu, CpuError};
+use crate::{cpu_impl::AddressingMode, engine::decoder, CpuError, CpuImpl};
 
-pub fn disassemble(cpu: &Cpu, address: u16) -> Result<(String, u16), CpuError> {
+pub fn disassemble(cpu: &CpuImpl, address: u16) -> Result<(String, u16), CpuError> {
     let decoded_instr = decoder::decode(cpu.get_byte_at(address)?)?;
     let mut operand_bytes: [u8; 2] = [0; 2];
 
@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn disassemble_legal_opcode() -> Result<(), CpuError> {
-        let mut cpu = Cpu::new();
+        let mut cpu = CpuImpl::new();
         cpu.load_program(
             0x0600,
             &[

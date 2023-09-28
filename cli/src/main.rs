@@ -10,7 +10,7 @@ use clap::Parser;
 
 use args::CliArgs;
 use debug_loop::{show_usage, DebuggerCommand, DebuggerLoop};
-use mos6502_emulator::{create, CpuController, CpuRegisterSnapshot, CpuType};
+use mos6502_emulator::{create_cpu, Cpu, CpuRegisterSnapshot, CpuType};
 
 fn main() {
     let args = CliArgs::parse();
@@ -33,32 +33,31 @@ fn main() {
 }
 
 fn run(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
-    let (mut cpu, start_addr) = create_cpu(args)?;
+    let (mut cpu, start_addr) = init_cpu(args)?;
 
     anyhow::Ok(cpu.run(Some(start_addr))?)
 }
 
 fn debug(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
-    let (mut cpu, start_addr) = create_cpu(args)?;
+    let (mut cpu, start_addr) = init_cpu(args)?;
 
-    let mut dbg = cpu.as_debugger();
-    dbg.set_pc(start_addr)?;
+    cpu.set_pc(start_addr)?;
 
-    print_register(dbg.get_register_snapshot());
+    print_register(cpu.get_register_snapshot());
     let mut dbg_loop = DebuggerLoop::new();
     loop {
         let cmd = dbg_loop.get_user_input();
         match cmd {
             DebuggerCommand::Step => {
-                let snapshot = dbg.step()?;
+                let snapshot = cpu.step()?;
                 print_register(snapshot);
             }
             DebuggerCommand::Continue => {
-                let snapshot = dbg.run(None)?;
+                let snapshot = cpu.run(None)?;
                 print_register(snapshot);
             }
             DebuggerCommand::Disassemble => {
-                let lines = dbg.disassemble(dbg.get_pc(), 10)?;
+                let lines = cpu.disassemble(cpu.get_pc(), 10)?;
                 for line in lines {
                     println!("  {}", line);
                 }
@@ -73,11 +72,11 @@ fn debug(args: &CliArgs) -> Result<CpuRegisterSnapshot> {
             DebuggerCommand::Repeat => panic!("not reachable"),
         }
     }
-    anyhow::Ok(dbg.get_register_snapshot())
+    anyhow::Ok(cpu.get_register_snapshot())
 }
 
-fn create_cpu(args: &CliArgs) -> Result<(Box<dyn CpuController>, u16), Error> {
-    let mut cpu = create(CpuType::MOS6502)?;
+fn init_cpu(args: &CliArgs) -> Result<(Box<dyn Cpu>, u16), Error> {
+    let mut cpu = create_cpu(CpuType::MOS6502)?;
     let load_addr: Option<u16>;
 
     if args.binary.is_some() {

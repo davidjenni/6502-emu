@@ -1,4 +1,4 @@
-use crate::cpu::{AddressingMode, Cpu};
+use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::engine::opcodes::OpCode;
 use crate::engine::ops::alu::*;
 use crate::engine::ops::branch_jump::*;
@@ -9,7 +9,7 @@ use crate::engine::ops::stack::*;
 use crate::engine::ops::transfer::*;
 use crate::CpuError;
 
-type OpCodeExecute = fn(AddressingMode, &mut Cpu) -> Result<(), CpuError>;
+type OpCodeExecute = fn(AddressingMode, &mut CpuImpl) -> Result<(), CpuError>;
 
 #[derive(Debug)]
 pub struct DecodedInstruction {

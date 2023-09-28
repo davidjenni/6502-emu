@@ -1,11 +1,11 @@
-use crate::cpu::{AddressingMode, Cpu};
+use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::CpuError;
 
 // LDA/X/Y:
 
 // LDA:    M -> A
 // status: N. ...Z.
-pub fn execute_lda(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_lda(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let value = cpu.get_effective_operand(mode)?;
     cpu.accumulator = value;
     cpu.status.update_from(value);
@@ -14,7 +14,7 @@ pub fn execute_lda(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // LDX:    M -> X
 // status: N. ...Z.
-pub fn execute_ldx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_ldx(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let value = cpu.get_effective_operand(mode)?;
     cpu.index_x = value;
     cpu.status.update_from(value);
@@ -23,7 +23,7 @@ pub fn execute_ldx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // LDY:    M -> Y
 // status: N. ...Z.
-pub fn execute_ldy(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_ldy(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let value = cpu.get_effective_operand(mode)?;
     cpu.index_y = value;
     cpu.status.update_from(value);
@@ -34,7 +34,7 @@ pub fn execute_ldy(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // STA:    A -> M
 // status: N. ...Z.
-pub fn execute_sta(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_sta(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let val = cpu.accumulator;
     cpu.memory.write(effective_address, val)?;
@@ -44,7 +44,7 @@ pub fn execute_sta(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // STX:    X -> M
 // status: N. ...Z.
-pub fn execute_stx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_stx(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let val = cpu.index_x;
     cpu.memory.write(effective_address, val)?;
@@ -54,7 +54,7 @@ pub fn execute_stx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // STY:    Y -> M
 // status: N. ...Z.
-pub fn execute_sty(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_sty(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
     let val = cpu.index_y;
     cpu.memory.write(effective_address, val)?;
@@ -64,7 +64,7 @@ pub fn execute_sty(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TAX:    A -> X
 // status: N. ...Z.
-pub fn execute_tax(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_tax(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -75,7 +75,7 @@ pub fn execute_tax(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TAY:    A -> Y
 // status: N. ...Z.
-pub fn execute_tay(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_tay(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -86,7 +86,7 @@ pub fn execute_tay(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TXA:    X -> A
 // status: N. ...Z.
-pub fn execute_txa(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_txa(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -97,7 +97,7 @@ pub fn execute_txa(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TYA:    Y -> A
 // status: N. ...Z.
-pub fn execute_tya(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_tya(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -115,18 +115,18 @@ mod tests {
 
     // create a Cpu instance and write test value value into zero page address $E0
     // writes zero page address $E0 into next PC address $0300
-    fn setup_cpu_for_load(value: u8) -> Cpu {
+    fn setup_cpu_for_load(value: u8) -> CpuImpl {
         let mut cpu = create_cpu();
         cpu.memory.write(ZERO_PAGE_ADDR, value).unwrap();
         cpu
     }
 
-    fn setup_cpu_for_store() -> Cpu {
+    fn setup_cpu_for_store() -> CpuImpl {
         create_cpu()
     }
 
-    fn create_cpu() -> Cpu {
-        let mut cpu = Cpu::default();
+    fn create_cpu() -> CpuImpl {
+        let mut cpu = CpuImpl::default();
         cpu.memory.write(NEXT_PC, ZERO_PAGE_ADDR as u8).unwrap();
         cpu.address_bus.set_pc(NEXT_PC).unwrap();
         cpu

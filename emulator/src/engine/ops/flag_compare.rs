@@ -1,4 +1,4 @@
-use crate::cpu::{AddressingMode, Cpu};
+use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::engine::ops::alu::subtract_with_carry;
 use crate::CpuError;
 
@@ -8,7 +8,7 @@ use crate::CpuError;
 // 0 -> C
 //         76543210
 // status: .. ....c
-pub fn execute_clc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_clc(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_carry(false);
     Ok(())
@@ -18,7 +18,7 @@ pub fn execute_clc(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 0 -> D
 //         76543210
 // status: .. .d...
-pub fn execute_cld(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_cld(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_decimal_mode(false);
     Ok(())
@@ -28,7 +28,7 @@ pub fn execute_cld(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 0 -> I
 //         76543210
 // status: .. ..i..
-pub fn execute_cli(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_cli(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_interrupt_disable(false);
     Ok(())
@@ -38,7 +38,7 @@ pub fn execute_cli(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 0 -> C
 //         76543210
 // status: .v .....
-pub fn execute_clv(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_clv(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_overflow(false);
     Ok(())
@@ -50,7 +50,7 @@ pub fn execute_clv(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 1 -> C
 //         76543210
 // status: .. ....C
-pub fn execute_sec(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_sec(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_carry(true);
     Ok(())
@@ -60,7 +60,7 @@ pub fn execute_sec(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 1 -> D
 //         76543210
 // status: .. .D...
-pub fn execute_sed(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_sed(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_decimal_mode(true);
     Ok(())
@@ -70,7 +70,7 @@ pub fn execute_sed(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // 1 -> I
 //         76543210
 // status: .. ..I..
-pub fn execute_sei(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_sei(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     validate_mode(mode)?;
     cpu.status.set_interrupt_disable(true);
     Ok(())
@@ -89,7 +89,7 @@ fn validate_mode(mode: AddressingMode) -> Result<(), CpuError> {
 // A AND M, M7 -> N, M6 -> V
 //         76543210
 // status: NV ...Z.
-pub fn execute_bit(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_bit(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let operand = cpu.get_effective_operand(mode)?;
     cpu.status.set_negative(operand & 0b1000_0000 != 0);
     cpu.status.set_overflow(operand & 0b0100_0000 != 0);
@@ -106,7 +106,7 @@ pub fn execute_bit(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // A - M -> C,Z,N
 //         76543210
 // status: N. ...ZC
-pub fn execute_cmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_cmp(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     compare_register(cpu.accumulator, mode, cpu)?;
     Ok(())
 }
@@ -115,7 +115,7 @@ pub fn execute_cmp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // X - M -> C,Z,N
 //         76543210
 // status: N. ...ZC
-pub fn execute_cpx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_cpx(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     compare_register(cpu.index_x, mode, cpu)?;
     Ok(())
 }
@@ -124,12 +124,12 @@ pub fn execute_cpx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // X - M -> C,Z,N
 //         76543210
 // status: N. ...ZC
-pub fn execute_cpy(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_cpy(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     compare_register(cpu.index_y, mode, cpu)?;
     Ok(())
 }
 
-fn compare_register(register: u8, mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+fn compare_register(register: u8, mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let operand = cpu.get_effective_operand(mode)?;
     let (result, carry, _) = subtract_with_carry(register, operand, true);
     cpu.status.update_from(result);
@@ -142,8 +142,8 @@ mod tests {
 
     const NEXT_PC: u16 = 0x1234;
 
-    fn setup_cpu_for_compare(operand: u8) -> Result<Cpu, CpuError> {
-        let mut cpu = Cpu::default();
+    fn setup_cpu_for_compare(operand: u8) -> Result<CpuImpl, CpuError> {
+        let mut cpu = CpuImpl::default();
         cpu.address_bus.set_pc(NEXT_PC)?;
         cpu.memory.write(NEXT_PC, operand)?;
         Ok(cpu)
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn status_flags_address_mode_implied() -> Result<(), CpuError> {
-        let mut cpu = Cpu::new();
+        let mut cpu = CpuImpl::new();
         assert_eq!(
             execute_clc(AddressingMode::Absolute, &mut cpu),
             Err(CpuError::InvalidAddressingMode)
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn set_and_clear_all_status_flags() -> Result<(), CpuError> {
-        let mut cpu = Cpu::new();
+        let mut cpu = CpuImpl::new();
 
         execute_sec(AddressingMode::Implied, &mut cpu)?;
         assert!(cpu.status.carry());

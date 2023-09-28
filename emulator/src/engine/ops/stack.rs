@@ -1,10 +1,10 @@
-use crate::cpu::{AddressingMode, Cpu};
+use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::CpuError;
 
 // PHA: Push accumulator
 //  A -> SP
 // status: n/c
-pub fn execute_pha(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_pha(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -15,7 +15,7 @@ pub fn execute_pha(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // PHP: Push status register
 //  S -> SP
 // status: n/c
-pub fn execute_php(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_php(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -27,7 +27,7 @@ pub fn execute_php(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // PLA: Pull accumulator
 //  SP -> A
 // status: N. ...Z.
-pub fn execute_pla(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_pla(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -39,7 +39,7 @@ pub fn execute_pla(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 // PLP: Pull status register
 //  SP -> P
 // status: NV .DIZC
-pub fn execute_plp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_plp(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -50,7 +50,7 @@ pub fn execute_plp(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TSX:    SP -> X
 // status: N. ...Z.
-pub fn execute_tsx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_tsx(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -61,7 +61,7 @@ pub fn execute_tsx(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> 
 
 // TXS:    X -> SP
 // status: N. ...Z.
-pub fn execute_txs(mode: AddressingMode, cpu: &mut Cpu) -> Result<(), CpuError> {
+pub fn execute_txs(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     if mode != AddressingMode::Implied {
         return Err(CpuError::InvalidAddressingMode);
     }
@@ -77,8 +77,8 @@ mod tests {
     const ZERO_PAGE_ADDR: u16 = 0x00E0;
     const NEXT_PC: u16 = 0x0300;
 
-    fn create_cpu() -> Cpu {
-        let mut cpu = Cpu::default();
+    fn create_cpu() -> CpuImpl {
+        let mut cpu = CpuImpl::default();
         cpu.memory.write(NEXT_PC, ZERO_PAGE_ADDR as u8).unwrap();
         cpu.address_bus.set_pc(NEXT_PC).unwrap();
         cpu
