@@ -28,7 +28,7 @@ fn convert_csv_to_opcodes(opcodes_file: &Path, out_file_path: &Path) -> io::Resu
     out_file.write_all(b"    match opcode{\n")?;
 
     let mut line_cnt = 0;
-    if let Ok(lines) = read_lines(opcodes_file.clone()) {
+    if let Ok(lines) = read_lines(opcodes_file) {
         for line in lines {
             const COLUMNS: usize = 5;
             //   opcode,mnemonic,addressing mode,bytes,cycles,flags
