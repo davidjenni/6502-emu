@@ -84,7 +84,7 @@ jobs:
         run: cargo install grcov
 
       # https://github.com/mozilla/grcov#example-how-to-generate-source-based-coverage-for-a-rust-project
-      - name: "`grcov` ~ install"
+      - name: "add source based coverage support"
         run: rustup component add llvm-tools-preview
 
       - name: Execute tests
