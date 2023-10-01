@@ -1,6 +1,6 @@
 mod args;
 mod bin_file;
-mod debug_loop;
+mod debugger;
 
 use std::io;
 use std::process;
@@ -9,8 +9,8 @@ use std::result::Result::Ok;
 use anyhow::{Context, Error, Result};
 use clap::Parser;
 
+use crate::debugger::{print_register, Debugger};
 use args::CliArgs;
-use debug_loop::{show_usage, DebuggerCommand, DebuggerLoop};
 use mos6502_emulator::{create_cpu, Cpu, CpuRegisterSnapshot, CpuType};
 
 fn main() {
@@ -88,36 +88,9 @@ where
         let (mut cpu, start_addr) = self.init_cpu(args)?;
 
         cpu.set_pc(start_addr)?;
+        let mut dbg = Debugger::<R, W, E>::new();
+        dbg.debug(&mut cpu)?;
 
-        self.print_register(cpu.get_register_snapshot());
-        let mut dbg_loop = DebuggerLoop::new();
-        loop {
-            let cmd = dbg_loop.get_user_input();
-            match cmd {
-                DebuggerCommand::Step => {
-                    let snapshot = cpu.step()?;
-                    self.print_register(snapshot);
-                }
-                DebuggerCommand::Continue => {
-                    let snapshot = cpu.run(None)?;
-                    self.print_register(snapshot);
-                }
-                DebuggerCommand::Disassemble => {
-                    let lines = cpu.disassemble(cpu.get_pc(), 10)?;
-                    for line in lines {
-                        self.writeln(format!("  {}", line).as_str());
-                    }
-                }
-                DebuggerCommand::Invalid => {
-                    show_usage();
-                }
-                DebuggerCommand::Quit => {
-                    self.writeln("Exiting...");
-                    break;
-                }
-                DebuggerCommand::Repeat => panic!("not reachable"),
-            }
-        }
         anyhow::Ok(cpu.get_register_snapshot())
     }
 
@@ -156,23 +129,8 @@ where
         Ok((cpu, start_addr))
     }
 
-    fn print_register(&mut self, snapshot: CpuRegisterSnapshot) {
-        self.writeln(
-            format!(
-                "PC: {:04X}: A: {:02X} X: {:02X} Y: {:02X} S: {:08b} SP: {:04X}",
-                snapshot.program_counter,
-                snapshot.accumulator,
-                snapshot.x_register,
-                snapshot.y_register,
-                snapshot.status,
-                snapshot.stack_pointer,
-            )
-            .as_str(),
-        );
-    }
-
     fn print_snapshot(&mut self, snapshot: CpuRegisterSnapshot) {
-        self.print_register(snapshot.clone());
+        print_register(&mut self.stdout, snapshot.clone());
         self.writeln(
             format!(
                 "Instructions: {}; Cycles: {}; Clock speed: {:.3} MHz",
@@ -224,7 +182,7 @@ mod tests {
             }
         }
 
-        pub fn get_stdout(&self) -> String {
+        pub fn get_stdout(&'a self) -> String {
             str::from_utf8(&self.stdout).unwrap().to_string()
         }
 
@@ -242,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn running_simplest_prg() -> Result<(), Error> {
+    fn main_running_simplest_prg() -> Result<(), Error> {
         let args = CliArgs::parse_from(["run", "-b=tests/assets/simplest.prg"]);
 
         let mut spy = Spy::default();
@@ -260,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn _print_snapshot() -> Result<(), Error> {
+    fn main_print_snapshot() -> Result<(), Error> {
         #[allow(unused_variables)]
         let snapshot = CpuRegisterSnapshot {
             accumulator: 0x42,
@@ -275,7 +233,7 @@ mod tests {
             approximate_clock_speed: 123456.0,
         };
 
-        let mut spy = Spy::default();
+        let mut spy: Spy = Spy::default();
         let mut m = prepare_main(&mut spy);
         m.print_snapshot(snapshot);
 
