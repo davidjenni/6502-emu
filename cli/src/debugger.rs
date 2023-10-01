@@ -38,7 +38,7 @@ where
         }
     }
 
-    pub fn debug(&mut self, cpu: &mut Box<dyn Cpu>) -> Result<CpuRegisterSnapshot> {
+    pub fn debug_loop(&mut self, cpu: &mut Box<dyn Cpu>) -> Result<CpuRegisterSnapshot> {
         print_register(&mut self.stdout, cpu.get_register_snapshot());
         loop {
             let cmd = self.get_user_input();
@@ -119,6 +119,7 @@ pub fn print_register(writer: &mut dyn io::Write, snapshot: CpuRegisterSnapshot)
 }
 
 fn parse_command(input: &str) -> DebuggerCommand {
+    let input = input.trim().to_ascii_lowercase();
     let mut iter = input.split_whitespace();
     match iter.next() {
         Some("step") | Some("s") => DebuggerCommand::Step,
@@ -128,5 +129,104 @@ fn parse_command(input: &str) -> DebuggerCommand {
         Some("quit") | Some("q") => DebuggerCommand::Quit,
         None => DebuggerCommand::Repeat,
         _ => DebuggerCommand::Invalid,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Ok;
+    use std::str;
+
+    use super::*;
+
+    struct Spy<'a> {
+        stdin: &'a [u8],
+        stdout: Vec<u8>,
+        stderr: Vec<u8>,
+    }
+
+    impl<'a> Spy<'a> {
+        pub fn new(input: &'a str) -> Spy<'a> {
+            Spy {
+                stdin: input.as_bytes(),
+                stdout: vec![],
+                stderr: vec![],
+            }
+        }
+
+        pub fn get_stdout(&'a self) -> String {
+            str::from_utf8(&self.stdout).unwrap().to_string()
+        }
+
+        #[allow(dead_code)]
+        pub fn get_stderr(&self) -> String {
+            str::from_utf8(&self.stderr).unwrap().to_string()
+        }
+    }
+
+    #[test]
+    fn parse_command_upper_lower() {
+        assert_eq!(parse_command("step"), DebuggerCommand::Step);
+        assert_eq!(parse_command("s"), DebuggerCommand::Step);
+        assert_eq!(parse_command("sTeP"), DebuggerCommand::Step);
+
+        assert_eq!(parse_command("continue"), DebuggerCommand::Continue);
+        assert_eq!(parse_command("C"), DebuggerCommand::Continue);
+        assert_eq!(parse_command("ConTinUE"), DebuggerCommand::Continue);
+
+        assert_eq!(parse_command("disasseMBle"), DebuggerCommand::Disassemble);
+        assert_eq!(parse_command("di"), DebuggerCommand::Disassemble);
+
+        assert_eq!(parse_command("quit"), DebuggerCommand::Quit);
+        assert_eq!(parse_command("Q"), DebuggerCommand::Quit);
+
+        assert_eq!(parse_command(""), DebuggerCommand::Repeat);
+
+        assert_eq!(parse_command("BlA"), DebuggerCommand::Invalid);
+    }
+
+    #[test]
+    fn _loop() -> Result<()> {
+        let mut spy = Spy::new("disassemble\nstep\nstep\nquit\n");
+        let mut debugger = Debugger {
+            stdin: Box::new(spy.stdin),
+            stdout: &mut spy.stdout,
+            stderr: &mut spy.stderr,
+            last_cmd: DebuggerCommand::Invalid,
+        };
+        let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
+        cpu.load_program(0x0300, &[0xA9, 0x42, 0x85, 0x0F, 0x00])?;
+        cpu.set_pc(0x0300)?;
+        let snapshot = debugger.debug_loop(&mut cpu)?;
+
+        assert_eq!(snapshot.program_counter, 0x0304);
+        assert_eq!(debugger.last_cmd, DebuggerCommand::Quit);
+        let stdout = spy.get_stdout();
+        // println!("{}", stdout);
+        assert!(stdout.contains("PC: 0300: A: 00 X: 00 Y: 00 S: 00000000 SP: 01FF"));
+        assert!(stdout.contains("0300 LDA #$42"));
+        assert!(stdout.contains("PC: 0302: A: 42"));
+        Ok(())
+    }
+
+    #[test]
+    fn usage() -> Result<()> {
+        let mut spy = Spy::new("help\nquit\n");
+        let mut debugger = Debugger {
+            stdin: Box::new(spy.stdin),
+            stdout: &mut spy.stdout,
+            stderr: &mut spy.stderr,
+            last_cmd: DebuggerCommand::Invalid,
+        };
+        let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
+        cpu.load_program(0x0300, &[0x00])?;
+        cpu.set_pc(0x0300)?;
+        debugger.debug_loop(&mut cpu)?;
+
+        let stdout = spy.get_stdout();
+        // println!("{}", stdout);
+        assert!(stdout.contains("Usage:"));
+        assert!(stdout.contains("disassemble (di)  - disassemble instructions from current PC"));
+        Ok(())
     }
 }

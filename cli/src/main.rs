@@ -89,7 +89,7 @@ where
 
         cpu.set_pc(start_addr)?;
         let mut dbg = Debugger::<R, W, E>::new();
-        dbg.debug(&mut cpu)?;
+        dbg.debug_loop(&mut cpu)?;
 
         anyhow::Ok(cpu.get_register_snapshot())
     }
@@ -243,5 +243,12 @@ mod tests {
         assert!(stdout.contains("Instructions: 123456"));
 
         Ok(())
+    }
+
+    #[test]
+    fn main_help() {
+        let args = CliArgs::parse_from(["-h"]);
+        assert!(args.format.is_none());
+        assert_eq!(args.command, args::Command::Run);
     }
 }
