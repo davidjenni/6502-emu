@@ -173,15 +173,6 @@ mod tests {
             }
         }
 
-        #[allow(dead_code)]
-        pub fn new(input: &'a str) -> Spy<'a> {
-            Spy {
-                stdin: input.as_bytes(),
-                stdout: vec![],
-                stderr: vec![],
-            }
-        }
-
         pub fn get_stdout(&'a self) -> String {
             str::from_utf8(&self.stdout).unwrap().to_string()
         }
@@ -197,6 +188,43 @@ mod tests {
             stdout: &mut spy.stdout,
             stderr: &mut spy.stderr,
         }
+    }
+
+    #[test]
+    fn try_main_run() -> Result<(), Error> {
+        let args = CliArgs::parse_from(["run"]);
+
+        let mut spy = Spy::default();
+        let m = prepare_main(&mut spy);
+
+        m.try_main(&args)?;
+
+        let stdout = spy.get_stdout();
+        println!("{}", stdout);
+        assert!(stdout.contains("Start execution at address FFFE"));
+        assert_eq!(spy.get_stderr().len(), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn try_main_unknown_file() -> Result<(), Error> {
+        let args = CliArgs::parse_from(["run", "-b=unknown.prg"]);
+
+        let mut spy = Spy::default();
+        let m = prepare_main(&mut spy);
+
+        let r = m.try_main(&args);
+        assert!(r.is_err());
+        let stderr = spy.get_stderr();
+        // println!("ERR: {}", stderr);
+        assert!(stderr.contains("Program finished with error:"));
+        assert!(stderr.contains("Error loading binary file 'unknown.prg'"));
+
+        let stdout = spy.get_stdout();
+        // println!("{}", stdout);
+        assert_eq!(stdout.len(), 0);
+
+        Ok(())
     }
 
     #[test]

@@ -15,7 +15,6 @@ pub enum DebuggerCommand {
 }
 
 pub struct Debugger<R, W, E> {
-    #[allow(dead_code)]
     stdin: R,
     stdout: W,
     #[allow(dead_code)]
@@ -187,7 +186,7 @@ mod tests {
 
     #[test]
     fn _loop() -> Result<()> {
-        let mut spy = Spy::new("disassemble\nstep\nstep\nquit\n");
+        let mut spy = Spy::new("disassemble\nstep\n\nquit\n");
         let mut debugger = Debugger {
             stdin: Box::new(spy.stdin),
             stdout: &mut spy.stdout,
