@@ -74,6 +74,10 @@ impl CpuImpl {
         self.stack.reset()?;
 
         self.address_bus.set_pc(SystemVector::Reset as u16)?;
+        self.accumulator = 0;
+        self.index_x = 0;
+        self.index_y = 0;
+        self.status.update_from(self.accumulator);
 
         self.accumulated_cycles = 0;
         self.accumulated_instructions = 0;
@@ -253,6 +257,22 @@ mod tests {
         assert_eq!(cpu.address_bus.get_pc(), START_ADDR + delta);
     }
 
+    //============= controlling CPU state =============
+    #[test]
+    fn reset() -> Result<(), CpuError> {
+        let mut cpu = CpuImpl::default();
+
+        cpu.reset()?;
+
+        assert_eq!(cpu.address_bus.get_pc(), SystemVector::Reset as u16);
+        assert_eq!(cpu.accumulator, 0);
+        assert_eq!(cpu.index_x, 0);
+        assert_eq!(cpu.index_y, 0);
+        // Z = 1
+        assert_eq!(cpu.status.get_status(), 0b0000_0010);
+        Ok(())
+    }
+
     //============= get_effective_operand tests =============
     #[test]
     #[should_panic(expected = "InvalidAddressingMode")]
@@ -388,6 +408,19 @@ mod tests {
         let res = cpu.get_effective_operand(AddressingMode::IndirectIndexedY)?;
         assert_eq!(res, EXPECTED);
         assert_final_pc(&cpu, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn get_effective_operand_invalid_addressing_mode() -> Result<(), CpuError> {
+        let mut cpu = setup_test_cpu(&[OP_CODE, ZERO_PAGE_ADDR])?;
+        populate_zero_page(cpu.memory.as_mut(), &[0x1F, 0x03])?;
+        cpu.memory.write(0x0321, EXPECTED)?;
+
+        cpu.index_y = 2;
+        let res = cpu.get_effective_operand(AddressingMode::Relative);
+        assert!(res.is_err());
+        assert_eq!(res, Err(CpuError::InvalidAddressingMode));
         Ok(())
     }
 

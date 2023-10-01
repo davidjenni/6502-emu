@@ -185,7 +185,7 @@ mod tests {
     }
 
     #[test]
-    fn _loop() -> Result<()> {
+    fn debug_loop() -> Result<()> {
         let mut spy = Spy::new("disassemble\nstep\n\nquit\n");
         let mut debugger = Debugger {
             stdin: Box::new(spy.stdin),
@@ -202,7 +202,7 @@ mod tests {
         assert_eq!(debugger.last_cmd, DebuggerCommand::Quit);
         let stdout = spy.get_stdout();
         // println!("{}", stdout);
-        assert!(stdout.contains("PC: 0300: A: 00 X: 00 Y: 00 S: 00000000 SP: 01FF"));
+        assert!(stdout.contains("PC: 0300: A: 00 X: 00 Y: 00 S: 00000010 SP: 01FF"));
         assert!(stdout.contains("0300 LDA #$42"));
         assert!(stdout.contains("PC: 0302: A: 42"));
         Ok(())
