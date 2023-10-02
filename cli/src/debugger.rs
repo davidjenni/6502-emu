@@ -20,6 +20,7 @@ pub struct Debugger<R, W, E> {
     #[allow(dead_code)]
     stderr: E,
     last_cmd: DebuggerCommand,
+    last_addr: Option<u16>,
 }
 
 impl<R, W, E> Debugger<R, W, E>
@@ -34,6 +35,7 @@ where
             stdout: Box::new(io::stdout()),
             stderr: Box::new(io::stderr()),
             last_cmd: DebuggerCommand::Invalid,
+            last_addr: None,
         }
     }
 
@@ -45,16 +47,23 @@ where
                 DebuggerCommand::Step => {
                     let snapshot = cpu.step()?;
                     print_register(&mut self.stdout, snapshot);
+                    self.last_addr = None;
                 }
                 DebuggerCommand::Continue => {
-                    let snapshot = cpu.run(None)?;
+                    let snapshot = cpu.run(Some(cpu.get_pc()))?;
                     print_register(&mut self.stdout, snapshot);
+                    self.last_addr = None;
                 }
                 DebuggerCommand::Disassemble => {
-                    let lines = cpu.disassemble(cpu.get_pc(), 10)?;
+                    let addr = match self.last_addr {
+                        Some(addr) => addr,
+                        None => cpu.get_pc(),
+                    };
+                    let (lines, next_addr) = cpu.disassemble(addr, 10)?;
                     for line in lines {
                         self.writeln(format!("  {}", line).as_str());
                     }
+                    self.last_addr = Some(next_addr);
                 }
                 DebuggerCommand::Invalid => {
                     self.show_usage();
@@ -192,6 +201,7 @@ mod tests {
             stdout: &mut spy.stdout,
             stderr: &mut spy.stderr,
             last_cmd: DebuggerCommand::Invalid,
+            last_addr: None,
         };
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
         cpu.load_program(0x0300, &[0xA9, 0x42, 0x85, 0x0F, 0x00])?;
@@ -216,6 +226,7 @@ mod tests {
             stdout: &mut spy.stdout,
             stderr: &mut spy.stderr,
             last_cmd: DebuggerCommand::Invalid,
+            last_addr: None,
         };
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
         cpu.load_program(0x0300, &[0x00])?;
