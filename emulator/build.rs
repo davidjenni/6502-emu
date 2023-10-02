@@ -25,7 +25,7 @@ fn convert_csv_to_opcodes(opcodes_file: &Path, out_file_path: &Path) -> io::Resu
     let mut out_file = LineWriter::new(File::create(out_file_path)?);
     println!("cargo:warning=generating: {}...", out_file_path.display());
 
-    out_file.write_all(b"    match opcode{\n")?;
+    out_file.write_all(b"    match opcode_byte{\n")?;
 
     let mut line_cnt = 0;
     if let Ok(lines) = read_lines(opcodes_file) {
@@ -48,14 +48,15 @@ fn convert_csv_to_opcodes(opcodes_file: &Path, out_file_path: &Path) -> io::Resu
 
             writeln!(
                 out_file,
-                //     0x69 => Ok(DecodedInstruction { opcode: OpCode::ADC, mode: AddressingMode::Immediate, execute: execute_adc, extra_bytes: 2, cycles: 2, }),
-                "        {} => Ok(DecodedInstruction {{ opcode: OpCode::{}, mode: AddressingMode::{}, execute: execute_{}, extra_bytes: {}, cycles: {}, }}),",
+                //     0x69 => Ok(DecodedInstruction { opcode: OpCode::ADC, mode: AddressingMode::Immediate, execute: execute_adc, extra_bytes: 2, cycles: 2, hex_opcode: 0x69, }),
+                "        {} => Ok(DecodedInstruction {{ opcode: OpCode::{}, mode: AddressingMode::{}, execute: execute_{}, extra_bytes: {}, cycles: {}, hex_opcode: {} }}),",
                 hex_opcode,
                 mnemonic.to_ascii_uppercase(),
                 to_addressing_mode(&mode),
                 mnemonic.to_ascii_lowercase(),
                 bytes.parse::<u8>().unwrap() - 1,   // TODO need better error handling for number parsing
                 cycles.parse::<u8>().unwrap(),
+                hex_opcode,
             )?;
 
             line_cnt += 1;
@@ -65,7 +66,7 @@ fn convert_csv_to_opcodes(opcodes_file: &Path, out_file_path: &Path) -> io::Resu
     }
     writeln!(
         out_file,
-        "        _ => Err(CpuError::InvalidOpcode(opcode)),"
+        "        _ => Err(CpuError::InvalidOpcode(opcode_byte)),"
     )?;
     out_file.write_all(b"    }\n")?;
 

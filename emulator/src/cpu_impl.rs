@@ -2,9 +2,9 @@ use std::time::{Duration, Instant};
 
 use crate::address_bus::AddressBusImpl;
 use crate::address_bus::{AddressBus, SystemVector};
+use crate::cpu_traps::{TrapDoor, TrapOutcomeStatus};
 use crate::engine::decoder;
 use crate::engine::decoder::DecodedInstruction;
-use crate::engine::opcodes::OpCode;
 use crate::memory::Memory;
 use crate::memory::MemoryImpl;
 use crate::stack_pointer::StackPointer;
@@ -39,6 +39,7 @@ pub struct CpuImpl {
     pub memory: Box<dyn Memory>, // TODO: should be reverted back to private
     pub address_bus: Box<dyn AddressBus>, // TODO: should be reverted back to private
     pub stack: Box<dyn StackPointer>, // TODO: should be reverted back to private
+    traps: TrapDoor,
 
     // stats counters:
     elapsed_time: Duration,
@@ -67,6 +68,7 @@ impl CpuImpl {
             accumulated_instructions: 0,
             approximate_clock_speed: 0.0,
             elapsed_time: Duration::new(0, 0),
+            traps: TrapDoor::new(),
         }
     }
 
@@ -115,10 +117,9 @@ impl CpuImpl {
         })?;
         let start = Instant::now();
         loop {
-            let (last_opcode, cycles) = self.step()?;
-            self.accumulated_instructions += 1;
-            self.accumulated_cycles += cycles as u64;
-            if last_opcode == OpCode::BRK {
+            let is_break = self.step()?;
+
+            if is_break {
                 break;
             }
         }
@@ -128,10 +129,26 @@ impl CpuImpl {
         Ok(())
     }
 
-    pub fn step(&mut self) -> Result<(OpCode, u8), CpuError> {
+    pub fn step(&mut self) -> Result<bool, CpuError> {
+        let address = self.address_bus.get_pc();
         let decoded = self.fetch_and_decode()?;
-        (decoded.execute)(decoded.mode, self)?;
-        Ok((decoded.opcode, decoded.cycles))
+
+        let outcome = self.traps.pre_execute(decoded.clone(), address)?;
+
+        match outcome.status {
+            TrapOutcomeStatus::Continue | TrapOutcomeStatus::StopAfter => {
+                // execute instruction:
+                (decoded.execute)(decoded.mode, self)?;
+                self.accumulated_instructions += 1;
+                self.accumulated_cycles += decoded.cycles as u64;
+                Ok(outcome.status == TrapOutcomeStatus::StopAfter)
+            }
+            TrapOutcomeStatus::Handled => {
+                // TODO: transfer trap result to CPU registers
+                Ok(false)
+            }
+            TrapOutcomeStatus::Stop => Ok(true),
+        }
     }
 
     pub fn get_register_snapshot(&self) -> crate::CpuRegisterSnapshot {
@@ -158,8 +175,8 @@ impl CpuImpl {
     }
 
     fn fetch_and_decode(&mut self) -> Result<DecodedInstruction, CpuError> {
-        let opcode = self.address_bus.fetch_byte_at_pc(self.memory.as_mut())?;
-        let res = decoder::decode(opcode)?;
+        let opcode_byte = self.address_bus.fetch_byte_at_pc(self.memory.as_mut())?;
+        let res = decoder::decode(opcode_byte)?;
         Ok(res)
     }
 
