@@ -111,4 +111,30 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn disassemble_illegal_opcode() -> Result<(), CpuError> {
+        let mut cpu = CpuImpl::new();
+        cpu.load_program(
+            0x0600,
+            &[
+                0xA9, 0x42, // LDA #$42
+                0xFA, 0xFF, // illegal opcode
+                0x00, // BRK
+            ],
+        )?;
+
+        let (mut result, mut next_addr) = disassemble(&cpu, 0x0600)?;
+        assert_eq!(result, "0600 LDA #$42");
+        assert_eq!(next_addr, 0x0602);
+
+        (result, next_addr) = disassemble(&cpu, next_addr)?;
+        assert_eq!(result, "0602 ILL(FA)");
+        assert_eq!(next_addr, 0x0603);
+
+        (result, next_addr) = disassemble(&cpu, next_addr)?;
+        assert_eq!(result, "0603 ILL(FF)");
+        assert_eq!(next_addr, 0x0604);
+        Ok(())
+    }
 }

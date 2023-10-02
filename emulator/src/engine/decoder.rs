@@ -29,11 +29,25 @@ impl DecodedInstruction {
 
 #[rustfmt::skip]
 pub fn decode(opcode: u8) -> Result<DecodedInstruction, CpuError> {
+    match decode_via_csv(opcode) {
+        Ok(decoded) => Ok(decoded),
+        Err(_) => Ok(DecodedInstruction {
+            opcode: OpCode::ILL(opcode),
+            mode: AddressingMode::Implied,
+            execute: execute_brk,
+            extra_bytes: 0,
+            cycles: 0,
+        }),
+    }
+}
+
+#[rustfmt::skip]
+fn decode_via_csv(opcode: u8) -> Result<DecodedInstruction, CpuError> {
     // lookup table is generated via ../build.rs from a CSV file:
     // generated file somewhere at: target/debug/build/mos6502-emulator-<generatedId>/out/opcodes_mos6502.r
     // see also compile output for actual path
     include!(concat!(env!("OUT_DIR"), "/opcodes_mos6502.rs"))
-}
+ }
 
 #[cfg(test)]
 mod tests {
@@ -58,14 +72,22 @@ mod tests {
     }
 
     #[test]
-    fn decode_illegal_opcode() {
-        let decoded = decode(0xff);
-        assert!(decoded.is_err());
+    fn decode_illegal_opcode() -> Result<(), CpuError> {
+        let decoded = decode(0xff)?;
+        assert_eq!(decoded.opcode, OpCode::ILL(0xff));
+        assert_eq!(decoded.mode, AddressingMode::Implied);
+        assert_eq!(decoded.extra_bytes, 0);
+        assert_eq!(decoded.cycles, 0);
+        Ok(())
     }
 
     #[test]
-    fn get_mnemonic() {
-        let decoded = decode(0x00).unwrap();
+    fn get_mnemonic() -> Result<(), CpuError> {
+        let decoded = decode(0x00)?;
         assert_eq!(decoded.get_mnemonic(), "BRK");
+
+        let decoded = decode(0xFA)?;
+        assert_eq!(decoded.get_mnemonic(), "ILL(FA)");
+        Ok(())
     }
 }
