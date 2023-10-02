@@ -51,3 +51,7 @@
 *.dynlib filter=lfs diff=lfs merge=lfs -text
 *.pdb filter=lfs diff=lfs merge=lfs -text
 *.so filter=lfs diff=lfs merge=lfs -text
+
+# 6502 binaries
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.prg filter=lfs diff=lfs merge=lfs -text
