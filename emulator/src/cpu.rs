@@ -51,7 +51,7 @@ impl Cpu for CpuControllerImpl {
         self.cpu.get_register_snapshot()
     }
 
-    fn disassemble(&self, start_addr: u16, lines: usize) -> Result<Vec<String>, CpuError> {
+    fn disassemble(&self, start_addr: u16, lines: usize) -> Result<(Vec<String>, u16), CpuError> {
         let mut disassembled_lines = Vec::new();
         let mut cnt = lines;
         let mut next_addr = start_addr;
@@ -61,7 +61,7 @@ impl Cpu for CpuControllerImpl {
             disassembled_lines.push(line);
             cnt -= 1;
         }
-        Ok(disassembled_lines)
+        Ok((disassembled_lines, next_addr))
     }
 
     fn get_byte_at(&self, address: u16) -> Result<u8, CpuError> {

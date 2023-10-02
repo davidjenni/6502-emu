@@ -15,7 +15,7 @@
           "kind": "bin"
         }
       },
-      "args": ["debug", "-b=cli/tests/assets/simplest.prg"],
+      "args": ["debug", "-b=cli/tests/assets/euclid_gcd.prg", "-s=512"],
       "cwd": "${workspaceFolder}"
     },
     {
