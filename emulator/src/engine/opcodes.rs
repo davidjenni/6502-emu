@@ -59,10 +59,31 @@ pub enum OpCode {
     TXA, // Transfer Index X to Accumulator
     TXS, // Transfer Index X to Stack pointer
     TYA, // Transfer Index Y to Accumulator
+
+    ILL(u8), // Illegal opcode
 }
 
 impl fmt::Display for OpCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
+        match *self {
+            OpCode::ILL(opcode) => write!(f, "ILL({:02X})", opcode),
+            _ => fmt::Debug::fmt(self, f),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_print_op_code() {
+        assert_eq!(OpCode::ADC.to_string(), "ADC");
+        assert_eq!(OpCode::EOR.to_string(), "EOR");
+        assert_eq!(OpCode::JSR.to_string(), "JSR");
+        assert_eq!(OpCode::LDA.to_string(), "LDA");
+        assert_eq!(OpCode::TYA.to_string(), "TYA");
+
+        assert_eq!(OpCode::ILL(0xff).to_string(), "ILL(FF)");
     }
 }
