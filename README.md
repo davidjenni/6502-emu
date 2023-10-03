@@ -51,6 +51,9 @@ Options:
   -s, --start-address <START_ADDRESS>
           Start address (u16) for binary to be started with; can be hex address in 0x1234 format
 
+  -r, --read-only
+          loaded binary is read-only in memory (simulate ROM)
+
   -h, --help
           Print help (see a summary with '-h')
 
@@ -76,7 +79,7 @@ Debugging with step and disassembly listing is also possible.
 
 ```bash
 cargo run --bin r6502 -- debug -b ./cli/tests/assets/euclid_gcd.prg -s 0x0200
-Loaded 476 bytes at address 0040
+Loaded 476 bytes at address 0040; read-only mem=false
 PC: 0200: A: 00 X: 00 Y: 00 S: 00000000 SP: 01FF
 (dbg)> di
   0200 LDA $40

@@ -70,6 +70,7 @@ mod tests {
     use super::*;
     use mockall::predicate::*;
     use mockall::*;
+    use std::ops;
 
     mock! {
         pub _Memory {}
@@ -82,6 +83,8 @@ mod tests {
             fn get_size(&self) -> usize;
             fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
             fn write_zero_page_word(&mut self, address: u8, value: u16) -> Result<(), CpuError>;
+            fn add_readonly(&mut self, range: ops::Range<u16>) -> Result<(), CpuError>;
+            fn clear_readonly_ranges(&mut self);
         }
     }
     #[test]

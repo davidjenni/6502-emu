@@ -1,6 +1,8 @@
 use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::CpuError;
 
+use super::transfer::memory_write_tolerate_readonly;
+
 // Arithmetic operations:
 
 // ADC:    A + M + C -> A, C
@@ -230,6 +232,7 @@ fn read_modify_write(
         cpu.accumulator = result;
     } else {
         cpu.memory.write(address.unwrap(), result)?;
+        memory_write_tolerate_readonly(address.unwrap(), result, cpu)?;
     }
 
     Ok(())

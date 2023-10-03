@@ -85,8 +85,18 @@ impl CpuImpl {
         Ok(())
     }
 
-    pub fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
-        self.memory.load_program(start_addr, program)
+    pub fn load_program(
+        &mut self,
+        start_addr: u16,
+        program: &[u8],
+        is_readonly: bool,
+    ) -> Result<(), CpuError> {
+        self.memory.load_program(start_addr, program)?;
+        if is_readonly {
+            self.memory
+                .add_readonly(start_addr..start_addr + program.len() as u16)?;
+        }
+        Ok(())
     }
 
     pub fn set_pc(&mut self, addr: u16) -> Result<(), CpuError> {
@@ -238,7 +248,7 @@ mod tests {
     fn setup_test_cpu(program: &[u8]) -> Result<CpuImpl, CpuError> {
         let mut cpu = CpuImpl::default();
 
-        cpu.load_program(START_ADDR, program)?;
+        cpu.load_program(START_ADDR, program, false)?;
         cpu.address_bus.set_pc(START_ADDR)?;
 
         // prepare PC to point past the opcode:

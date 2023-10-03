@@ -27,6 +27,8 @@ pub enum CpuError {
     MissingOperand,
     #[error("op code instruction expects an operand, but none was found")]
     StackOverflow,
+    #[error("memory range is read-only")]
+    ReadOnlyMemory,
 }
 
 #[derive(Debug, Clone)]
@@ -46,7 +48,12 @@ pub struct CpuRegisterSnapshot {
 
 pub trait Cpu {
     fn reset(&mut self) -> Result<(), CpuError>;
-    fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
+    fn load_program(
+        &mut self,
+        start_addr: u16,
+        program: &[u8],
+        is_readonly: bool,
+    ) -> Result<(), CpuError>;
 
     // debugger API:
     fn set_pc(&mut self, addr: u16) -> Result<(), CpuError>;

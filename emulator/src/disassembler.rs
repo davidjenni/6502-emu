@@ -83,6 +83,7 @@ mod tests {
                 0xEA, // NOP
                 0x00, // BRK
             ],
+            true,
         )?;
 
         let (mut result, mut next_addr) = disassemble(&cpu, 0x0600)?;
@@ -122,6 +123,7 @@ mod tests {
                 0xFA, 0xFF, // illegal opcode
                 0x00, // BRK
             ],
+            true,
         )?;
 
         let (mut result, mut next_addr) = disassemble(&cpu, 0x0600)?;

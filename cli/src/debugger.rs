@@ -204,7 +204,7 @@ mod tests {
             last_addr: None,
         };
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
-        cpu.load_program(0x0300, &[0xA9, 0x42, 0x85, 0x0F, 0x00])?;
+        cpu.load_program(0x0300, &[0xA9, 0x42, 0x85, 0x0F, 0x00], true)?;
         cpu.set_pc(0x0300)?;
         let snapshot = debugger.debug_loop(&mut cpu)?;
 
@@ -229,7 +229,7 @@ mod tests {
             last_addr: None,
         };
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
-        cpu.load_program(0x0300, &[0x00])?;
+        cpu.load_program(0x0300, &[0x00], true)?;
         cpu.set_pc(0x0300)?;
         debugger.debug_loop(&mut cpu)?;
 

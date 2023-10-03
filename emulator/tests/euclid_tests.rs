@@ -23,6 +23,7 @@ fn run_gcd_euclid() -> Result<(), CpuError> {
             0xA5, 0x40, // LDA VAR_A
             0x00, // BRK
         ],
+        true,
     )?;
     // initialize zero page variables:
     cpu.set_byte_at(0x0040, 126)?; // VAR_A

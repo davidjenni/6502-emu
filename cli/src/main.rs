@@ -109,9 +109,15 @@ where
                 ));
             }
             let load_addr = load_addr.unwrap();
-            cpu.load_program(load_addr, &b.data)?;
+            cpu.load_program(load_addr, &b.data, args.read_only)?;
             self.writeln(
-                format!("Loaded {} bytes at address {:04X}", b.data.len(), load_addr).as_str(),
+                format!(
+                    "Loaded {} bytes at address {:04X}; read-only mem={}",
+                    b.data.len(),
+                    load_addr,
+                    args.read_only
+                )
+                .as_str(),
             );
         } else {
             self.writeln(
