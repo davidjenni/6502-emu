@@ -1,4 +1,5 @@
 use clap::{Parser, ValueEnum};
+use clap_num::maybe_hex;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum Command {
@@ -30,11 +31,11 @@ pub struct CliArgs {
     /// File format of the binary file to load
     pub format: Option<FileFormat>,
 
-    #[arg(short, long, required = false, value_parser = clap::value_parser!(u16))]
+    #[arg(short, long, required = false, value_parser = maybe_hex::<u16>)]
     /// Load address (u16) for binary to be loaded to (inferred for .prg); if no start_addr it is also used as start address
     pub load_address: Option<u16>,
 
-    #[arg(short, long, required = false, value_parser = clap::value_parser!(u16))]
-    /// Start address (u16) for binary to be started with
+    #[arg(short, long, required = false, value_parser = maybe_hex::<u16>)]
+    /// Start address (u16) for binary to be started with; can be hex address in 0x1234 format
     pub start_address: Option<u16>,
 }
