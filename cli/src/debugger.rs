@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Error, Ok, Result};
 use std::io;
 
 use mos6502_emulator::{Cpu, CpuRegisterSnapshot};
@@ -40,18 +40,18 @@ where
     }
 
     pub fn debug_loop(&mut self, cpu: &mut Box<dyn Cpu>) -> Result<CpuRegisterSnapshot> {
-        print_register(&mut self.stdout, cpu.get_register_snapshot());
+        self.print_snapshot(cpu, cpu.get_register_snapshot())?;
         loop {
             let cmd = self.get_user_input();
             match cmd {
                 DebuggerCommand::Step => {
                     let snapshot = cpu.step()?;
-                    print_register(&mut self.stdout, snapshot);
+                    self.print_snapshot(cpu, snapshot)?;
                     self.last_addr = None;
                 }
                 DebuggerCommand::Continue => {
                     let snapshot = cpu.run(Some(cpu.get_pc()))?;
-                    print_register(&mut self.stdout, snapshot);
+                    self.print_snapshot(cpu, snapshot)?;
                     self.last_addr = None;
                 }
                 DebuggerCommand::Disassemble => {
@@ -88,7 +88,7 @@ where
         self.stdout.flush().expect("Failed to flush stdout");
     }
 
-    pub fn get_user_input(&mut self) -> DebuggerCommand {
+    fn get_user_input(&mut self) -> DebuggerCommand {
         self.write("(dbg)> ");
         let mut input = String::new();
         self.stdin
@@ -103,7 +103,18 @@ where
         cmd
     }
 
-    pub fn show_usage(&mut self) {
+    fn print_snapshot(
+        &mut self,
+        cpu: &mut Box<dyn Cpu>,
+        snapshot: CpuRegisterSnapshot,
+    ) -> Result<(), Error> {
+        print_register(&mut self.stdout, snapshot);
+        let (current_op, _) = cpu.disassemble(cpu.get_pc(), 1)?;
+        self.writeln(format!("    {}", current_op[0]).as_str());
+        Ok(())
+    }
+
+    fn show_usage(&mut self) {
         self.writeln("Usage:");
         self.writeln("  step (s)          - step one instruction");
         self.writeln("  disassemble (di)  - disassemble instructions from current PC");
