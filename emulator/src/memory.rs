@@ -1,3 +1,5 @@
+use std::ops;
+
 use crate::CpuError;
 
 pub trait Memory {
@@ -9,18 +11,38 @@ pub trait Memory {
     fn write_zero_page_word(&mut self, address: u8, value: u16) -> Result<(), CpuError>;
     fn get_size(&self) -> usize;
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError>;
+    fn add_readonly(&mut self, range: ops::Range<u16>) -> Result<(), CpuError>;
+    fn clear_readonly_ranges(&mut self);
 }
 
 #[derive(Clone)]
 pub struct MemoryImpl {
     memory: Vec<u8>,
+    ranges: Vec<ops::Range<u16>>,
 }
 
 impl MemoryImpl {
     pub fn new(size: usize) -> MemoryImpl {
         MemoryImpl {
             memory: vec![0; size],
+            ranges: vec![],
         }
+    }
+
+    fn write_byte(
+        &mut self,
+        address: u16,
+        value: u8,
+        ignore_readonly: bool,
+    ) -> Result<(), CpuError> {
+        if (address as usize) >= self.memory.len() {
+            return Err(CpuError::InvalidAddress);
+        }
+        if !ignore_readonly && self.ranges.iter().any(|r| r.contains(&address)) {
+            return Err(CpuError::ReadOnlyMemory);
+        }
+        self.memory[address as usize] = value;
+        Ok(())
     }
 }
 
@@ -62,11 +84,7 @@ impl Memory for MemoryImpl {
     }
 
     fn write(&mut self, address: u16, value: u8) -> Result<(), CpuError> {
-        if (address as usize) >= self.memory.len() {
-            return Err(CpuError::InvalidAddress);
-        }
-        self.memory[address as usize] = value;
-        Ok(())
+        self.write_byte(address, value, false)
     }
 
     fn write_word(&mut self, address: u16, value: u16) -> Result<(), CpuError> {
@@ -86,9 +104,19 @@ impl Memory for MemoryImpl {
 
     fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
         for (i, byte) in program.iter().enumerate() {
-            self.write(start_addr + i as u16, *byte)?;
+            // allow writing to readonly memory here:
+            self.write_byte(start_addr + i as u16, *byte, true)?;
         }
         Ok(())
+    }
+
+    fn add_readonly(&mut self, range: ops::Range<u16>) -> Result<(), CpuError> {
+        self.ranges.push(range);
+        Ok(())
+    }
+
+    fn clear_readonly_ranges(&mut self) {
+        self.ranges.clear();
     }
 }
 
@@ -157,6 +185,28 @@ pub mod tests {
         assert_eq!(0xBB, mem.read(0)?);
         mem.write(9, 0xEE)?;
         assert_eq!(0xEE, mem.read(9)?);
+        Ok(())
+    }
+
+    #[test]
+    fn write_to_readonly_rejected() -> Result<(), CpuError> {
+        let mut mem = MemoryImpl::new(0x0200);
+        mem.add_readonly(0x0100..0x0200)?;
+
+        // load_program to readonly area is still allowed:
+        mem.load_program(0x0180, &[0x12, 0x34, 0x56])?;
+
+        assert!(mem.write(0x0100, 0x55).is_err());
+        assert!(mem.write(0x0180, 0xAA).is_err());
+        assert!(mem.write(0x01FF, 0xDD).is_err());
+        assert_eq!(0x12, mem.read(0x0180)?);
+
+        mem.write(0x00AB, 0x55)?;
+        assert_eq!(0x55, mem.read(0x00AB)?);
+
+        mem.clear_readonly_ranges();
+        mem.write(0x0180, 0xAA)?;
+        assert_eq!(0xAA, mem.read(0x0180)?);
         Ok(())
     }
 }

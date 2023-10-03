@@ -36,29 +36,34 @@ pub fn execute_ldy(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuErr
 // status: N. ...Z.
 pub fn execute_sta(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
-    let val = cpu.accumulator;
-    cpu.memory.write(effective_address, val)?;
-    cpu.status.update_from(val);
-    Ok(())
+    memory_write_tolerate_readonly(effective_address, cpu.accumulator, cpu)
 }
 
 // STX:    X -> M
 // status: N. ...Z.
 pub fn execute_stx(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
-    let val = cpu.index_x;
-    cpu.memory.write(effective_address, val)?;
-    cpu.status.update_from(val);
-    Ok(())
+    memory_write_tolerate_readonly(effective_address, cpu.index_x, cpu)
 }
 
 // STY:    Y -> M
 // status: N. ...Z.
 pub fn execute_sty(mode: AddressingMode, cpu: &mut CpuImpl) -> Result<(), CpuError> {
     let effective_address = cpu.get_effective_address(mode)?;
-    let val = cpu.index_y;
-    cpu.memory.write(effective_address, val)?;
-    cpu.status.update_from(val);
+    memory_write_tolerate_readonly(effective_address, cpu.index_y, cpu)
+}
+
+pub fn memory_write_tolerate_readonly(
+    effective_address: u16,
+    value: u8,
+    cpu: &mut CpuImpl,
+) -> Result<(), CpuError> {
+    match cpu.memory.write(effective_address, value) {
+        Ok(_) => {}
+        Err(CpuError::ReadOnlyMemory) => {}
+        Err(e) => return Err(e),
+    }
+    cpu.status.update_from(value);
     Ok(())
 }
 
@@ -111,6 +116,7 @@ mod tests {
     use super::*;
 
     const ZERO_PAGE_ADDR: u16 = 0x00E0;
+    const ABS_ADDR: u16 = 0xC0C0;
     const NEXT_PC: u16 = 0x0300;
 
     // create a Cpu instance and write test value value into zero page address $E0
@@ -123,6 +129,12 @@ mod tests {
 
     fn setup_cpu_for_store() -> CpuImpl {
         create_cpu()
+    }
+
+    fn setup_cpu_for_abs_store(addr: u16) -> CpuImpl {
+        let mut cpu = create_cpu();
+        cpu.memory.write_word(NEXT_PC, addr).unwrap();
+        cpu
     }
 
     fn create_cpu() -> CpuImpl {
@@ -307,5 +319,18 @@ mod tests {
         assert_eq!(cpu.accumulator, 0x42);
         assert!(!cpu.status.zero());
         assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_sta_readonly_memory() -> Result<(), CpuError> {
+        let mut cpu = setup_cpu_for_abs_store(ABS_ADDR);
+        cpu.memory.add_readonly(0xC000..0xFFFF)?;
+        cpu.accumulator = 0x42;
+
+        assert_eq!(cpu.memory.read(ABS_ADDR)?, 0x00);
+        execute_sta(AddressingMode::Absolute, &mut cpu)?;
+        // Store operation succeeded, but value was not written to readonly memory:
+        assert_eq!(cpu.memory.read(ABS_ADDR)?, 0x00);
+        Ok(())
     }
 }

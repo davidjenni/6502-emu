@@ -17,7 +17,8 @@ fn run_simple_program() -> Result<(), CpuError> {
                 0xA9, 0x42, // LDA #$42
                 0x85, 0x0F, // STA $0F
                 0x00, 0x00, // BRK
-            ]
+            ],
+            true
         )
         .is_ok());
     let snapshot = cpu.run(Some(0x0600))?;

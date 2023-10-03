@@ -23,8 +23,13 @@ impl Cpu for CpuControllerImpl {
         self.cpu.reset()
     }
 
-    fn load_program(&mut self, start_addr: u16, program: &[u8]) -> Result<(), CpuError> {
-        self.cpu.load_program(start_addr, program)
+    fn load_program(
+        &mut self,
+        start_addr: u16,
+        program: &[u8],
+        is_readonly: bool,
+    ) -> Result<(), CpuError> {
+        self.cpu.load_program(start_addr, program, is_readonly)
     }
 
     fn set_pc(&mut self, addr: u16) -> Result<(), CpuError> {

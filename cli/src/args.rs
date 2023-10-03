@@ -38,4 +38,8 @@ pub struct CliArgs {
     #[arg(short, long, required = false, value_parser = maybe_hex::<u16>)]
     /// Start address (u16) for binary to be started with; can be hex address in 0x1234 format
     pub start_address: Option<u16>,
+
+    #[arg(short, long)]
+    /// loaded binary is read-only in memory (simulate ROM)
+    pub read_only: bool,
 }
