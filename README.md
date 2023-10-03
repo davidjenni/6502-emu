@@ -46,7 +46,10 @@ Options:
           - prg: Like a bin file, but with a 16 byte header that indicates the load address
 
   -l, --load-address <LOAD_ADDRESS>
-          Load address (u16) for binary to be loaded to and started with
+          Load address (u16) for binary to be loaded to (inferred for .prg); if no start_addr it is also used as start address
+
+  -s, --start-address <START_ADDRESS>
+          Start address (u16) for binary to be started with; can be hex address in 0x1234 format
 
   -h, --help
           Print help (see a summary with '-h')
@@ -70,10 +73,9 @@ done.
 ```
 
 Debugging with step and disassembly listing is also possible.
-Note that addresses when starting the r6402 CLI still need to be entered decimal: 512 == 0x0200
 
 ```bash
-cargo run --bin r6502 -- debug -b ./cli/tests/assets/euclid_gcd.prg -s 512
+cargo run --bin r6502 -- debug -b ./cli/tests/assets/euclid_gcd.prg -s 0x0200
 Loaded 476 bytes at address 0040
 PC: 0200: A: 00 X: 00 Y: 00 S: 00000000 SP: 01FF
 (dbg)> di
