@@ -7,7 +7,7 @@ use mos6502_emulator::{Cpu, CpuRegisterSnapshot};
 pub enum DebuggerCommand {
     Step,
     Disassemble,
-    // Memory,
+    Memory,
     Continue,
     Quit,
     Repeat,
@@ -64,6 +64,20 @@ where
                         self.writeln(format!("  {}", line).as_str());
                     }
                     self.last_addr = Some(next_addr);
+                }
+                DebuggerCommand::Memory => {
+                    let addr = match self.last_addr {
+                        Some(addr) => addr,
+                        None => cpu.get_pc(),
+                    };
+                    let mut msg = format!("  {:04X}:", addr);
+                    for i in 0..16 {
+                        msg.push_str(
+                            format!(" {:02X}", cpu.get_byte_at(addr.wrapping_add(i + 1))?).as_str(),
+                        );
+                    }
+                    self.writeln(msg.as_str());
+                    self.last_addr = Some(addr + 16);
                 }
                 DebuggerCommand::Invalid => {
                     self.show_usage();
@@ -143,7 +157,7 @@ fn parse_command(input: &str) -> DebuggerCommand {
     match iter.next() {
         Some("step") | Some("s") => DebuggerCommand::Step,
         Some("disassemble") | Some("di") => DebuggerCommand::Disassemble,
-        // Some("memory")  | Some("m")=> DebuggerCommand::Memory,
+        Some("memory") | Some("m") => DebuggerCommand::Memory,
         Some("continue") | Some("c") => DebuggerCommand::Continue,
         Some("quit") | Some("q") => DebuggerCommand::Quit,
         None => DebuggerCommand::Repeat,
