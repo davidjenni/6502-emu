@@ -1,5 +1,6 @@
 mod args;
 mod bin_file;
+mod dbg_cmd_parser;
 mod debugger;
 
 use std::io;

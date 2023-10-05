@@ -1,0 +1,32 @@
+// 6502 debugger commands:
+//
+// PEG for pest:
+// online editor: https://pest.rs/#editor
+
+WHITESPACE = _{ " " | NEWLINE }
+
+continue_verb    = _{ ^"continue" | ^"c" }
+disassemble_verb = _{ ^"disassemble" | ^"di" }
+memory_verb      = _{ ^"memory" | ^"mem" | ^"m" }
+quit_verb        =  { ^"quit" | ^"q" }
+step_verb        =  { ^"step" | ^"s" }
+
+dec_address   = @{ ASCII_DIGIT+ }
+hex_prefix    = _{ ^"0x" | "$" }
+hex_address   = @{ ASCII_HEX_DIGIT+ }
+stack_pointer =  { ^"sp" }
+proc_counter  =  { ^"pc" }
+address       = _{ (hex_prefix ~ hex_address) | dec_address | stack_pointer | proc_counter }
+line_cnt      =  { ASCII_DIGIT+ }
+
+exclusive =  { ".." }
+inclusive =  { "..=" }
+range_sep = _{ inclusive | exclusive }
+
+range = _{ address ~ (range_sep ~ address | "," ~ line_cnt)? }
+
+continue_run = { continue_verb ~ (address)? }
+disassemble  = { disassemble_verb ~ (range)? }
+memory       = { memory_verb ~ (range)? }
+
+cmd = { SOI ~ (continue_run | disassemble | memory | step_verb | quit_verb) ~ EOI }

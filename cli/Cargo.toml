@@ -19,4 +19,6 @@ anyhow = "1.0.75"
 clap = { version = "4.4.4", features = ["derive", "help", "usage"] }
 clap-num = "1.0.2"
 mos6502-emulator = { version = "0.1.0", path = "../emulator" }
+pest = "2.7.4"
+pest_derive = "2.7.4"
 thiserror = "1.0.48"
