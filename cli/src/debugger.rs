@@ -1,25 +1,14 @@
-use anyhow::{Error, Ok, Result};
 use std::io;
 
-use mos6502_emulator::{Cpu, CpuRegisterSnapshot};
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum DebuggerCommand {
-    Step,
-    Disassemble,
-    Memory,
-    Continue,
-    Quit,
-    Repeat,
-    Invalid,
-}
+use crate::dbg_cmd_parser::{parse_cmd, DebugCmdError, DebugCommand};
+use mos6502_emulator::{Cpu, CpuError, CpuRegisterSnapshot};
 
 pub struct Debugger<R, W, E> {
     stdin: R,
     stdout: W,
     #[allow(dead_code)]
     stderr: E,
-    last_cmd: DebuggerCommand,
+    last_cmd: DebugCommand,
     last_addr: Option<u16>,
 }
 
@@ -34,27 +23,31 @@ where
             stdin: Box::new(io::BufReader::new(io::stdin())),
             stdout: Box::new(io::stdout()),
             stderr: Box::new(io::stderr()),
-            last_cmd: DebuggerCommand::Invalid,
+            last_cmd: DebugCommand::Invalid,
             last_addr: None,
         }
     }
 
-    pub fn debug_loop(&mut self, cpu: &mut Box<dyn Cpu>) -> Result<CpuRegisterSnapshot> {
+    pub fn debug_loop(
+        &mut self,
+        cpu: &mut Box<dyn Cpu>,
+    ) -> Result<CpuRegisterSnapshot, DebugCmdError> {
         self.print_snapshot(cpu, cpu.get_register_snapshot())?;
         loop {
-            let cmd = self.get_user_input();
+            let cmd = self.get_user_input()?;
             match cmd {
-                DebuggerCommand::Step => {
+                DebugCommand::Step => {
                     let snapshot = cpu.step()?;
                     self.print_snapshot(cpu, snapshot)?;
                     self.last_addr = None;
                 }
-                DebuggerCommand::Continue => {
+                DebugCommand::Continue => {
                     let snapshot = cpu.run(Some(cpu.get_pc()))?;
                     self.print_snapshot(cpu, snapshot)?;
                     self.last_addr = None;
                 }
-                DebuggerCommand::Disassemble => {
+                DebugCommand::Disassemble(_) => {
+                    // TODO: consume range
                     let addr = match self.last_addr {
                         Some(addr) => addr,
                         None => cpu.get_pc(),
@@ -65,7 +58,8 @@ where
                     }
                     self.last_addr = Some(next_addr);
                 }
-                DebuggerCommand::Memory => {
+                DebugCommand::Memory(_) => {
+                    // TODO: consume range
                     let addr = match self.last_addr {
                         Some(addr) => addr,
                         None => cpu.get_pc(),
@@ -79,17 +73,17 @@ where
                     self.writeln(msg.as_str());
                     self.last_addr = Some(addr + 16);
                 }
-                DebuggerCommand::Invalid => {
+                DebugCommand::Invalid => {
                     self.show_usage();
                 }
-                DebuggerCommand::Quit => {
+                DebugCommand::Quit => {
                     self.writeln("Exiting...");
                     break;
                 }
-                DebuggerCommand::Repeat => panic!("not reachable"),
+                DebugCommand::Repeat => panic!("not reachable"),
             }
         }
-        anyhow::Ok(cpu.get_register_snapshot())
+        Ok(cpu.get_register_snapshot())
     }
 
     fn writeln(&mut self, msg: &str) {
@@ -102,26 +96,42 @@ where
         self.stdout.flush().expect("Failed to flush stdout");
     }
 
-    fn get_user_input(&mut self) -> DebuggerCommand {
+    fn get_user_input(&mut self) -> Result<DebugCommand, DebugCmdError> {
         self.write("(dbg)> ");
         let mut input = String::new();
         self.stdin
             .read_line(&mut input)
             .expect("Failed to read user input");
-        let mut cmd = parse_command(input.trim());
-        if cmd == DebuggerCommand::Repeat {
+        let mut cmd = match parse_cmd(input.trim()) {
+            Ok(cmd) => cmd,
+            Err(e) => match e {
+                DebugCmdError::InvalidCommand(_) => {
+                    self.writeln(e.to_string().as_str());
+                    DebugCommand::Invalid
+                }
+                DebugCmdError::InvalidAddressRange(_) => {
+                    self.writeln(e.to_string().as_str());
+                    DebugCommand::Invalid
+                }
+                DebugCmdError::CpuError(_) => {
+                    self.writeln(e.to_string().as_str());
+                    DebugCommand::Invalid
+                }
+            },
+        };
+        if cmd == DebugCommand::Repeat {
             cmd = self.last_cmd
         } else {
             self.last_cmd = cmd;
         }
-        cmd
+        Ok(cmd)
     }
 
     fn print_snapshot(
         &mut self,
         cpu: &mut Box<dyn Cpu>,
         snapshot: CpuRegisterSnapshot,
-    ) -> Result<(), Error> {
+    ) -> Result<(), DebugCmdError> {
         print_register(&mut self.stdout, snapshot);
         let (current_op, _) = cpu.disassemble(cpu.get_pc(), 1)?;
         self.writeln(format!("    {}", current_op[0]).as_str());
@@ -130,11 +140,25 @@ where
 
     fn show_usage(&mut self) {
         self.writeln("Usage:");
-        self.writeln("  step (s)          - step one instruction");
-        self.writeln("  disassemble (di)  - disassemble instructions from current PC");
-        self.writeln("  continue (c)      - continue execution");
-        self.writeln("  <empty line>      - repeat last command");
-        self.writeln("  quit (q)          - quit debugger");
+        self.writeln("  <empty line>                  - repeat last command");
+        self.writeln("  step (s)                      - step one instruction");
+        self.writeln("  continue (c)                  - continue execution");
+        self.writeln("  disassemble (di) [addr_range] - disassemble instructions at address range");
+        self.writeln("  memory (m) [addr_range]       - print memory at address range");
+        self.writeln("  quit (q)                      - quit debugger");
+        self.writeln("");
+        self.writeln("  addr_range:");
+        self.writeln("  <empty>                     - current PC or last address with increment");
+        self.writeln("  <start_addr>                - start_addr dec or hex prefix '0x' or '$'");
+        self.writeln("  <start_addr>..<end_addr>    - exclusive range from start_addr to end_addr");
+        self.writeln("  <start_addr>..=<end_addr>   - inclusive range from start_addr to end_addr");
+        self.writeln("  <start_addr>,<line_cnt>     - range from start_addr for line_cnt lines");
+    }
+}
+
+impl From<CpuError> for DebugCmdError {
+    fn from(e: CpuError) -> Self {
+        DebugCmdError::CpuError(e.to_string())
     }
 }
 
@@ -151,23 +175,9 @@ pub fn print_register(writer: &mut dyn io::Write, snapshot: CpuRegisterSnapshot)
     writer.write_all(msg.as_bytes()).unwrap();
 }
 
-fn parse_command(input: &str) -> DebuggerCommand {
-    let input = input.trim().to_ascii_lowercase();
-    let mut iter = input.split_whitespace();
-    match iter.next() {
-        Some("step") | Some("s") => DebuggerCommand::Step,
-        Some("disassemble") | Some("di") => DebuggerCommand::Disassemble,
-        Some("memory") | Some("m") => DebuggerCommand::Memory,
-        Some("continue") | Some("c") => DebuggerCommand::Continue,
-        Some("quit") | Some("q") => DebuggerCommand::Quit,
-        None => DebuggerCommand::Repeat,
-        _ => DebuggerCommand::Invalid,
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use anyhow::Ok;
+    // use anyhow::Ok;
     use std::str;
 
     use super::*;
@@ -198,34 +208,13 @@ mod tests {
     }
 
     #[test]
-    fn parse_command_upper_lower() {
-        assert_eq!(parse_command("step"), DebuggerCommand::Step);
-        assert_eq!(parse_command("s"), DebuggerCommand::Step);
-        assert_eq!(parse_command("sTeP"), DebuggerCommand::Step);
-
-        assert_eq!(parse_command("continue"), DebuggerCommand::Continue);
-        assert_eq!(parse_command("C"), DebuggerCommand::Continue);
-        assert_eq!(parse_command("ConTinUE"), DebuggerCommand::Continue);
-
-        assert_eq!(parse_command("disasseMBle"), DebuggerCommand::Disassemble);
-        assert_eq!(parse_command("di"), DebuggerCommand::Disassemble);
-
-        assert_eq!(parse_command("quit"), DebuggerCommand::Quit);
-        assert_eq!(parse_command("Q"), DebuggerCommand::Quit);
-
-        assert_eq!(parse_command(""), DebuggerCommand::Repeat);
-
-        assert_eq!(parse_command("BlA"), DebuggerCommand::Invalid);
-    }
-
-    #[test]
-    fn debug_loop() -> Result<()> {
+    fn debug_loop() -> Result<(), DebugCmdError> {
         let mut spy = Spy::new("disassemble\nstep\n\nquit\n");
         let mut debugger = Debugger {
             stdin: Box::new(spy.stdin),
             stdout: &mut spy.stdout,
             stderr: &mut spy.stderr,
-            last_cmd: DebuggerCommand::Invalid,
+            last_cmd: DebugCommand::Invalid,
             last_addr: None,
         };
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
@@ -234,7 +223,7 @@ mod tests {
         let snapshot = debugger.debug_loop(&mut cpu)?;
 
         assert_eq!(snapshot.program_counter, 0x0304);
-        assert_eq!(debugger.last_cmd, DebuggerCommand::Quit);
+        assert_eq!(debugger.last_cmd, DebugCommand::Quit);
         let stdout = spy.get_stdout();
         // println!("{}", stdout);
         assert!(stdout.contains("PC: 0300: A: 00 X: 00 Y: 00 S: 00000010 SP: 01FF"));
@@ -244,13 +233,13 @@ mod tests {
     }
 
     #[test]
-    fn usage() -> Result<()> {
+    fn usage() -> Result<(), DebugCmdError> {
         let mut spy = Spy::new("help\nquit\n");
         let mut debugger = Debugger {
             stdin: Box::new(spy.stdin),
             stdout: &mut spy.stdout,
             stderr: &mut spy.stderr,
-            last_cmd: DebuggerCommand::Invalid,
+            last_cmd: DebugCommand::Invalid,
             last_addr: None,
         };
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
@@ -261,7 +250,8 @@ mod tests {
         let stdout = spy.get_stdout();
         // println!("{}", stdout);
         assert!(stdout.contains("Usage:"));
-        assert!(stdout.contains("disassemble (di)  - disassemble instructions from current PC"));
+        assert!(stdout
+            .contains("disassemble (di) [addr_range] - disassemble instructions at address range"));
         Ok(())
     }
 }

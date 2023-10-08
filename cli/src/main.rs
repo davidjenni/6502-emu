@@ -9,6 +9,7 @@ use std::result::Result::Ok;
 
 use anyhow::{Context, Error, Result};
 use clap::Parser;
+use dbg_cmd_parser::DebugCmdError;
 
 use crate::debugger::{print_register, Debugger};
 use args::CliArgs;
@@ -154,6 +155,12 @@ where
             )
             .as_str(),
         );
+    }
+}
+
+impl From<DebugCmdError> for Error {
+    fn from(e: DebugCmdError) -> Self {
+        anyhow::anyhow!("{}", e)
     }
 }
 

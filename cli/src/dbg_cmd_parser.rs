@@ -4,8 +4,8 @@ use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum DbgCmd {
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum DebugCommand {
     Continue,
     Disassemble(AddressRange),
     Invalid,
@@ -15,7 +15,7 @@ pub enum DbgCmd {
     Step,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AddressRange {
     StartEnd((u16, u16)),
     StartLines((u16, usize)),
@@ -23,25 +23,27 @@ pub enum AddressRange {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum DbgCmdError {
+pub enum DebugCmdError {
     InvalidCommand(String),
     InvalidAddressRange(u16),
+    CpuError(String),
 }
 
-impl std::fmt::Display for DbgCmdError {
+impl std::fmt::Display for DebugCmdError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            DbgCmdError::InvalidCommand(s) => write!(f, "Invalid command: {}", s),
-            DbgCmdError::InvalidAddressRange(s) => {
+            DebugCmdError::InvalidCommand(s) => write!(f, "Invalid command: {}", s),
+            DebugCmdError::InvalidAddressRange(s) => {
                 write!(f, "Invalid address: must be between 0 and {}", s)
             }
+            DebugCmdError::CpuError(s) => write!(f, "Cpu Error: {}", s),
         }
     }
 }
 
-impl From<ParseIntError> for DbgCmdError {
+impl From<ParseIntError> for DebugCmdError {
     fn from(_: ParseIntError) -> Self {
-        DbgCmdError::InvalidAddressRange(u16::MAX)
+        DebugCmdError::InvalidAddressRange(u16::MAX)
     }
 }
 
@@ -50,26 +52,26 @@ impl From<ParseIntError> for DbgCmdError {
 struct DbgCmdParser;
 
 #[allow(dead_code)]
-pub fn parse_cmd(input: &str) -> Result<DbgCmd, DbgCmdError> {
+pub fn parse_cmd(input: &str) -> Result<DebugCommand, DebugCmdError> {
     if input.is_empty() {
-        return Ok(DbgCmd::Repeat);
+        return Ok(DebugCommand::Repeat);
     }
 
     let mut parsed_cmd = match DbgCmdParser::parse(Rule::cmd, input) {
         Ok(pairs) => pairs,
         Err(e) => {
-            return Err(DbgCmdError::InvalidCommand(e.to_string()));
+            return Err(DebugCmdError::InvalidCommand(e.to_string()));
         }
     };
 
-    let mut dbg_cmd = DbgCmd::Invalid;
+    let mut dbg_cmd = DebugCommand::Invalid;
     for verb in parsed_cmd.next().unwrap().into_inner() {
         match verb.as_rule() {
-            Rule::continue_run => dbg_cmd = DbgCmd::Continue,
-            Rule::disassemble => dbg_cmd = DbgCmd::Disassemble(process_addr_range(verb)?),
-            Rule::memory => dbg_cmd = DbgCmd::Memory(process_addr_range(verb)?),
-            Rule::quit_verb => dbg_cmd = DbgCmd::Quit,
-            Rule::step_verb => dbg_cmd = DbgCmd::Step,
+            Rule::continue_run => dbg_cmd = DebugCommand::Continue,
+            Rule::disassemble => dbg_cmd = DebugCommand::Disassemble(process_addr_range(verb)?),
+            Rule::memory => dbg_cmd = DebugCommand::Memory(process_addr_range(verb)?),
+            Rule::quit_verb => dbg_cmd = DebugCommand::Quit,
+            Rule::step_verb => dbg_cmd = DebugCommand::Step,
             Rule::EOI => {}
             _ => unreachable!(),
         };
@@ -77,7 +79,7 @@ pub fn parse_cmd(input: &str) -> Result<DbgCmd, DbgCmdError> {
     Ok(dbg_cmd)
 }
 
-fn process_addr_range(pair: Pair<Rule>) -> Result<AddressRange, DbgCmdError> {
+fn process_addr_range(pair: Pair<Rule>) -> Result<AddressRange, DebugCmdError> {
     let mut b = AddressRangeBuilder::new();
     for inner_pair in pair.into_inner() {
         match inner_pair.as_rule() {
@@ -157,9 +159,9 @@ mod tests {
 
     // ======== disassemble commands
     #[test]
-    fn parse_disassemble_no_args() -> Result<(), DbgCmdError> {
+    fn parse_disassemble_no_args() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("dIsasSemble")?;
-        assert_eq!(DbgCmd::Disassemble(AddressRange::Default), cmd);
+        assert_eq!(DebugCommand::Disassemble(AddressRange::Default), cmd);
         Ok(())
     }
 
@@ -171,30 +173,30 @@ mod tests {
     // }
 
     #[test]
-    fn parse_disassemble_start_addr_only_dec() -> Result<(), DbgCmdError> {
+    fn parse_disassemble_start_addr_only_dec() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("di 1234")?;
         assert_eq!(
-            DbgCmd::Disassemble(AddressRange::StartEnd((1234, 1250))),
+            DebugCommand::Disassemble(AddressRange::StartEnd((1234, 1250))),
             cmd
         );
         Ok(())
     }
 
     #[test]
-    fn parse_disassemble_start_addr_only_hex() -> Result<(), DbgCmdError> {
+    fn parse_disassemble_start_addr_only_hex() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("di 0Xa0")?;
         assert_eq!(
-            DbgCmd::Disassemble(AddressRange::StartEnd((0xA0, 0xB0))),
+            DebugCommand::Disassemble(AddressRange::StartEnd((0xA0, 0xB0))),
             cmd
         );
         Ok(())
     }
 
     #[test]
-    fn parse_disassemble_start_addr_lines_hex() -> Result<(), DbgCmdError> {
+    fn parse_disassemble_start_addr_lines_hex() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("dI 0x1234,22")?;
         assert_eq!(
-            DbgCmd::Disassemble(AddressRange::StartLines((0x1234, 22))),
+            DebugCommand::Disassemble(AddressRange::StartLines((0x1234, 22))),
             cmd
         );
         Ok(())
@@ -202,51 +204,60 @@ mod tests {
 
     // ======== memory commands
     #[test]
-    fn parse_memory_no_args() -> Result<(), DbgCmdError> {
+    fn parse_memory_no_args() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("MeMory")?;
-        assert_eq!(DbgCmd::Memory(AddressRange::Default), cmd);
+        assert_eq!(DebugCommand::Memory(AddressRange::Default), cmd);
         Ok(())
     }
 
     #[test]
-    fn parse_memory_start_addr_only_dec() -> Result<(), DbgCmdError> {
+    fn parse_memory_start_addr_only_dec() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("m 1234")?;
-        assert_eq!(DbgCmd::Memory(AddressRange::StartEnd((1234, 1250))), cmd);
-        Ok(())
-    }
-
-    #[test]
-    fn parse_memory_start_addr_only_hex() -> Result<(), DbgCmdError> {
-        let cmd = parse_cmd("m 0Xa0")?;
-        assert_eq!(DbgCmd::Memory(AddressRange::StartEnd((0xA0, 0xB0))), cmd);
-        Ok(())
-    }
-
-    #[test]
-    fn parse_memory_start_addr_end_excl_range_hex() -> Result<(), DbgCmdError> {
-        let cmd = parse_cmd("m 0X1234 ..0x1240")?;
         assert_eq!(
-            DbgCmd::Memory(AddressRange::StartEnd((0x1234, 0x123F))),
+            DebugCommand::Memory(AddressRange::StartEnd((1234, 1250))),
             cmd
         );
         Ok(())
     }
 
     #[test]
-    fn parse_memory_start_addr_lines_hex() -> Result<(), DbgCmdError> {
+    fn parse_memory_start_addr_only_hex() -> Result<(), DebugCmdError> {
+        let cmd = parse_cmd("m 0Xa0")?;
+        assert_eq!(
+            DebugCommand::Memory(AddressRange::StartEnd((0xA0, 0xB0))),
+            cmd
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn parse_memory_start_addr_end_excl_range_hex() -> Result<(), DebugCmdError> {
+        let cmd = parse_cmd("m 0X1234 ..0x1240")?;
+        assert_eq!(
+            DebugCommand::Memory(AddressRange::StartEnd((0x1234, 0x123F))),
+            cmd
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn parse_memory_start_addr_lines_hex() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("M 0x1234,22")?;
-        assert_eq!(DbgCmd::Memory(AddressRange::StartLines((0x1234, 22))), cmd);
+        assert_eq!(
+            DebugCommand::Memory(AddressRange::StartLines((0x1234, 22))),
+            cmd
+        );
         Ok(())
     }
 
     // ======== error handling
     #[test]
-    fn parse_error_unknown_cmd() -> Result<(), DbgCmdError> {
+    fn parse_error_unknown_cmd() -> Result<(), DebugCmdError> {
         let res = parse_cmd("nonsense ");
         assert!(res.is_err());
         let err = res.err().unwrap();
         match err {
-            DbgCmdError::InvalidCommand(_) => {}
+            DebugCmdError::InvalidCommand(_) => {}
             _ => unreachable!("Unexpected error type"),
         };
         assert!(err.to_string().contains("Invalid command:"));
@@ -256,12 +267,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_error_bad_address_range() -> Result<(), DbgCmdError> {
+    fn parse_error_bad_address_range() -> Result<(), DebugCmdError> {
         let res = parse_cmd("m  0x1234, ");
         assert!(res.is_err());
         let err = res.err().unwrap();
         match err {
-            DbgCmdError::InvalidCommand(_) => {}
+            DebugCmdError::InvalidCommand(_) => {}
             _ => unreachable!("Unexpected error type"),
         };
         assert!(err.to_string().contains("Invalid command:"));
@@ -271,12 +282,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_error_bad_hex_address() -> Result<(), DbgCmdError> {
+    fn parse_error_bad_hex_address() -> Result<(), DebugCmdError> {
         let res = parse_cmd("m 0x0EFG");
         assert!(res.is_err());
         let err = res.err().unwrap();
         match err {
-            DbgCmdError::InvalidCommand(_) => {}
+            DebugCmdError::InvalidCommand(_) => {}
             _ => unreachable!("Unexpected error type"),
         };
         assert!(err.to_string().contains("Invalid command:"));
@@ -288,12 +299,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_error_bad_range_indicator() -> Result<(), DbgCmdError> {
+    fn parse_error_bad_range_indicator() -> Result<(), DebugCmdError> {
         let res = parse_cmd("m 0x0EF.=1234");
         assert!(res.is_err());
         let err = res.err().unwrap();
         match err {
-            DbgCmdError::InvalidCommand(_) => {}
+            DebugCmdError::InvalidCommand(_) => {}
             _ => unreachable!("Unexpected error type"),
         };
         println!("err: {}", err);
@@ -306,12 +317,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_error_dec_address_overflow() -> Result<(), DbgCmdError> {
+    fn parse_error_dec_address_overflow() -> Result<(), DebugCmdError> {
         let res = parse_cmd("m 66000");
         assert!(res.is_err());
         let err = res.err().unwrap();
         match err {
-            DbgCmdError::InvalidAddressRange(_) => {}
+            DebugCmdError::InvalidAddressRange(_) => {}
             _ => unreachable!("Unexpected error type"),
         };
         println!("err: {}", err);
@@ -322,12 +333,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_error_hex_address_overflow() -> Result<(), DbgCmdError> {
+    fn parse_error_hex_address_overflow() -> Result<(), DebugCmdError> {
         let res = parse_cmd("m 0x1E234");
         assert!(res.is_err());
         let err = res.err().unwrap();
         match err {
-            DbgCmdError::InvalidAddressRange(_) => {}
+            DebugCmdError::InvalidAddressRange(_) => {}
             _ => unreachable!("Unexpected error type"),
         };
         println!("err: {}", err);
@@ -339,16 +350,16 @@ mod tests {
 
     // ======== simple commands
     #[test]
-    fn parse_repeat() -> Result<(), DbgCmdError> {
+    fn parse_repeat() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("")?;
-        assert_eq!(DbgCmd::Repeat, cmd);
+        assert_eq!(DebugCommand::Repeat, cmd);
         Ok(())
     }
 
     #[test]
-    fn parse_quit() -> Result<(), DbgCmdError> {
+    fn parse_quit() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("  qUit ")?;
-        assert_eq!(DbgCmd::Quit, cmd);
+        assert_eq!(DebugCommand::Quit, cmd);
         Ok(())
     }
 }
