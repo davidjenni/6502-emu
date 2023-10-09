@@ -51,7 +51,6 @@ impl From<ParseIntError> for DebugCmdError {
 #[grammar = "dbg_cmd.pest"]
 struct DbgCmdParser;
 
-#[allow(dead_code)]
 pub fn parse_cmd(input: &str) -> Result<DebugCommand, DebugCmdError> {
     if input.is_empty() {
         return Ok(DebugCommand::Repeat);
@@ -83,7 +82,6 @@ fn process_addr_range(pair: Pair<Rule>) -> Result<AddressRange, DebugCmdError> {
     let mut b = AddressRangeBuilder::new();
     for inner_pair in pair.into_inner() {
         match inner_pair.as_rule() {
-            // TODO handle u16 overflow; grammar asserts it's a valid number, but no range assertion
             Rule::dec_address => b.add_addr(inner_pair.as_str().parse::<u16>()?),
             Rule::hex_address => b.add_addr(u16::from_str_radix(inner_pair.as_str(), 16)?),
             Rule::inclusive => b.is_exclusive_range(false),

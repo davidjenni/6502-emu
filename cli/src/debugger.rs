@@ -313,7 +313,6 @@ mod tests {
         };
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
         cpu.set_pc(0x0300)?;
-        #[allow(unused_variables)]
         debugger.debug_loop(&mut cpu)?;
 
         let stdout = spy.get_stdout();
@@ -322,6 +321,28 @@ mod tests {
         assert!(stdout.contains("0030: 00 00 00 00"));
         assert!(stdout.contains("0040: 00"));
         assert!(stdout.contains("0041: 00 00 00 00"));
+        Ok(())
+    }
+
+    #[test]
+    fn debug_loop_memory_illegal_address() -> Result<(), DebugCmdError> {
+        let mut spy = Spy::new("memory 0xA2042\nquit\n");
+        let mut debugger = Debugger {
+            stdin: Box::new(spy.stdin),
+            stdout: &mut spy.stdout,
+            stderr: &mut spy.stderr,
+            last_cmd: DebugCommand::Invalid,
+            last_prog_addr: None,
+            last_mem_addr: None,
+        };
+        let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
+        cpu.set_pc(0x0300)?;
+        debugger.debug_loop(&mut cpu)?;
+
+        let stdout = spy.get_stdout();
+        println!("{}", stdout);
+        assert!(stdout.contains("Invalid address: must be between 0 and 65535"));
+        assert!(stdout.contains("Usage:"));
         Ok(())
     }
 
@@ -347,5 +368,12 @@ mod tests {
         assert!(stdout
             .contains("disassemble (di) [addr_range] - disassemble instructions at address range"));
         Ok(())
+    }
+
+    #[test]
+    fn cpu_error_format() {
+        let err = CpuError::InvalidOpcode(0x42);
+        let dbg_err = DebugCmdError::from(err);
+        assert!(dbg_err.to_string().contains("Cpu Error: illegal op code"));
     }
 }
