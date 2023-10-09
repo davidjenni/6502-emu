@@ -11,13 +11,14 @@ use crate::CpuError;
 
 type OpCodeExecute = fn(AddressingMode, &mut CpuImpl) -> Result<(), CpuError>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DecodedInstruction {
     pub opcode: OpCode,
     pub mode: AddressingMode,
     pub execute: OpCodeExecute,
     pub extra_bytes: u8,
     pub cycles: u8,
+    pub hex_opcode: u8,
 }
 
 impl DecodedInstruction {
@@ -28,21 +29,22 @@ impl DecodedInstruction {
 }
 
 #[rustfmt::skip]
-pub fn decode(opcode: u8) -> Result<DecodedInstruction, CpuError> {
-    match decode_via_csv(opcode) {
+pub fn decode(opcode_byte: u8) -> Result<DecodedInstruction, CpuError> {
+    match decode_via_csv(opcode_byte) {
         Ok(decoded) => Ok(decoded),
         Err(_) => Ok(DecodedInstruction {
-            opcode: OpCode::ILL(opcode),
+            opcode: OpCode::ILL(opcode_byte),
             mode: AddressingMode::Implied,
             execute: execute_brk,
             extra_bytes: 0,
             cycles: 0,
+            hex_opcode: opcode_byte,
         }),
     }
 }
 
 #[rustfmt::skip]
-fn decode_via_csv(opcode: u8) -> Result<DecodedInstruction, CpuError> {
+fn decode_via_csv(opcode_byte: u8) -> Result<DecodedInstruction, CpuError> {
     // lookup table is generated via ../build.rs from a CSV file:
     // generated file somewhere at: target/debug/build/mos6502-emulator-<generatedId>/out/opcodes_mos6502.r
     // see also compile output for actual path

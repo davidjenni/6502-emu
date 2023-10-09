@@ -7,6 +7,7 @@ use crate::cpu_impl::CpuImpl;
 mod address_bus;
 mod cpu;
 mod cpu_impl;
+mod cpu_traps;
 mod disassembler;
 mod engine;
 mod memory;
