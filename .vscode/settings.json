@@ -21,5 +21,8 @@
   "editor.defaultFormatter": "rust-lang.rust-analyzer",
   "editor.formatOnSave": true,
   "rust-analyzer.check.command": "clippy",
-  "lldb.displayFormat": "hex"
+  "lldb.displayFormat": "hex",
+  "[pest]": {
+    "editor.defaultFormatter": "pest.pest-ide-tools"
+  }
 }

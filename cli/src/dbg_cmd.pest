@@ -7,6 +7,7 @@ WHITESPACE = _{ " " | NEWLINE }
 
 continue_verb    = _{ ^"continue" | ^"c" }
 disassemble_verb = _{ ^"disassemble" | ^"di" }
+help_verb        =  { ^"help" | ^"h" }
 memory_verb      = _{ ^"memory" | ^"mem" | ^"m" }
 quit_verb        =  { ^"quit" | ^"q" }
 step_verb        =  { ^"step" | ^"s" }
@@ -29,4 +30,4 @@ continue_run = { continue_verb ~ (address)? }
 disassemble  = { disassemble_verb ~ (range)? }
 memory       = { memory_verb ~ (range)? }
 
-cmd = { SOI ~ (continue_run | disassemble | memory | step_verb | quit_verb) ~ EOI }
+cmd = { SOI ~ (continue_run | disassemble | help_verb | memory | step_verb | quit_verb) ~ EOI }

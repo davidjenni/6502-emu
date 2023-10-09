@@ -8,6 +8,7 @@ use pest_derive::Parser;
 pub enum DebugCommand {
     Continue,
     Disassemble(AddressRange),
+    Help,
     Invalid,
     Memory(AddressRange),
     Quit,
@@ -68,6 +69,7 @@ pub fn parse_cmd(input: &str) -> Result<DebugCommand, DebugCmdError> {
         match verb.as_rule() {
             Rule::continue_run => dbg_cmd = DebugCommand::Continue,
             Rule::disassemble => dbg_cmd = DebugCommand::Disassemble(process_addr_range(verb)?),
+            Rule::help_verb => dbg_cmd = DebugCommand::Help,
             Rule::memory => dbg_cmd = DebugCommand::Memory(process_addr_range(verb)?),
             Rule::quit_verb => dbg_cmd = DebugCommand::Quit,
             Rule::step_verb => dbg_cmd = DebugCommand::Step,
@@ -151,8 +153,6 @@ impl AddressRangeBuilder {
 
 #[cfg(test)]
 mod tests {
-    // use anyhow::Ok;
-
     use super::*;
 
     // ======== disassemble commands
@@ -348,9 +348,16 @@ mod tests {
 
     // ======== simple commands
     #[test]
-    fn parse_repeat() -> Result<(), DebugCmdError> {
-        let cmd = parse_cmd("")?;
-        assert_eq!(DebugCommand::Repeat, cmd);
+    fn parse_continue() -> Result<(), DebugCmdError> {
+        let cmd = parse_cmd("  c ")?;
+        assert_eq!(DebugCommand::Continue, cmd);
+        Ok(())
+    }
+
+    #[test]
+    fn parse_help() -> Result<(), DebugCmdError> {
+        let cmd = parse_cmd("  help ")?;
+        assert_eq!(DebugCommand::Help, cmd);
         Ok(())
     }
 
@@ -358,6 +365,20 @@ mod tests {
     fn parse_quit() -> Result<(), DebugCmdError> {
         let cmd = parse_cmd("  qUit ")?;
         assert_eq!(DebugCommand::Quit, cmd);
+        Ok(())
+    }
+
+    #[test]
+    fn parse_repeat() -> Result<(), DebugCmdError> {
+        let cmd = parse_cmd("")?;
+        assert_eq!(DebugCommand::Repeat, cmd);
+        Ok(())
+    }
+
+    #[test]
+    fn parse_step() -> Result<(), DebugCmdError> {
+        let cmd = parse_cmd("  S ")?;
+        assert_eq!(DebugCommand::Step, cmd);
         Ok(())
     }
 }

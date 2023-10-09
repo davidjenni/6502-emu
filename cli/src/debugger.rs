@@ -79,7 +79,7 @@ where
                     }
                     self.last_mem_addr = Some(next_addr);
                 }
-                DebugCommand::Invalid => {
+                DebugCommand::Help | DebugCommand::Invalid => {
                     self.show_usage();
                 }
                 DebugCommand::Quit => {
