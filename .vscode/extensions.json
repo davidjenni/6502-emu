@@ -3,6 +3,7 @@
     "davidanson.vscode-markdownlint",
     "editorconfig.editorconfig",
     "me-dutour-mathieu.vscode-github-actions",
+    "pest.pest-ide-tools",
     "rust-lang.rust-analyzer",
     "serayuzgur.crates",
     "tamasfe.even-better-toml",

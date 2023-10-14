@@ -23,6 +23,9 @@ Windows, macOS or Linux/WSL:
   - [EditorConfig for VS Code (editorconfig.editorconfig)](https://github.com/editorconfig/editorconfig-vscode)
   - [CodeLLDB](https://github.com/vadimcn/codelldb)
   - [rust-analyzer](https://github.com/rust-lang/rust-analyzer)
+  - [pest grammar IDE](https://github.com/pest-parser/pest-ide-tools)
+- rust crates/binaries that some extensions depend on (check what is already present with `cargo install --list`):
+  - pest LSP server: `cargo install pest-language-server`
 
 ## Build, Test and Run
 
