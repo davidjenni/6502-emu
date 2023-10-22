@@ -1,16 +1,18 @@
 mod args;
 mod bin_file;
+mod console_io;
 mod dbg_cmd_parser;
 mod debugger;
 
-use std::io;
 use std::process;
 use std::result::Result::Ok;
 
 use anyhow::{Context, Error, Result};
 use clap::Parser;
+use console_io::StdIo;
 use dbg_cmd_parser::DebugCmdError;
 
+use crate::console_io::ConsoleIo;
 use crate::debugger::{print_register, Debugger};
 use args::CliArgs;
 use mos6502_emulator::{create_cpu, Cpu, CpuRegisterSnapshot, CpuType};
@@ -18,10 +20,9 @@ use mos6502_emulator::{create_cpu, Cpu, CpuRegisterSnapshot, CpuType};
 fn main() {
     let args = CliArgs::parse();
 
+    let mut console = ConsoleIo::default();
     let main = Main {
-        stdin: io::BufReader::new(io::stdin()),
-        stdout: io::stdout(),
-        stderr: io::stderr(),
+        stdio: &mut console,
     };
     let outcome = main.try_main(&args);
 
@@ -35,19 +36,11 @@ fn main() {
     }
 }
 
-struct Main<R, W, E> {
-    #[allow(dead_code)]
-    stdin: R,
-    stdout: W,
-    stderr: E,
+struct Main<'a> {
+    stdio: &'a mut dyn StdIo,
 }
 
-impl<R, W, E> Main<R, W, E>
-where
-    R: io::BufRead,
-    W: io::Write,
-    E: io::Write,
-{
+impl Main<'_> {
     pub fn try_main(mut self, args: &CliArgs) -> Result<()> {
         let outcome = match args.command {
             args::Command::Run => self.run(args),
@@ -73,11 +66,11 @@ where
     }
 
     fn write(&mut self, msg: &str) {
-        self.stdout.write_all(msg.as_bytes()).unwrap();
+        self.stdio.write(msg).unwrap();
     }
 
     fn err(&mut self, msg: &str) {
-        self.stderr.write_all(msg.as_bytes()).unwrap();
+        self.stdio.write_err(msg).unwrap();
     }
 
     fn run(&mut self, args: &CliArgs) -> Result<CpuRegisterSnapshot> {
@@ -90,7 +83,7 @@ where
         let (mut cpu, start_addr) = self.init_cpu(args)?;
 
         cpu.set_pc(start_addr)?;
-        let mut dbg = Debugger::<R, W, E>::new();
+        let mut dbg = Debugger::new(self.stdio);
         dbg.debug_loop(&mut cpu)?;
 
         anyhow::Ok(cpu.get_register_snapshot())
@@ -138,7 +131,7 @@ where
     }
 
     fn print_snapshot(&mut self, snapshot: CpuRegisterSnapshot) {
-        print_register(&mut self.stdout, snapshot.clone());
+        print_register(&mut self.stdio.get_writer(), snapshot.clone());
         self.writeln(
             format!(
                 "Instructions: {}; Cycles: {}; Clock speed: {:.3} MHz",
@@ -167,48 +160,20 @@ impl From<DebugCmdError> for Error {
 #[cfg(test)]
 mod tests {
     use anyhow::Ok;
-    use std::str;
     use std::time;
 
     use super::*;
+    use crate::console_io::tests::Spy;
 
-    struct Spy<'a> {
-        stdin: &'a [u8],
-        stdout: Vec<u8>,
-        stderr: Vec<u8>,
-    }
-
-    impl<'a> Spy<'a> {
-        pub fn default() -> Spy<'a> {
-            Spy {
-                stdin: "".as_bytes(),
-                stdout: vec![],
-                stderr: vec![],
-            }
-        }
-
-        pub fn get_stdout(&'a self) -> String {
-            str::from_utf8(&self.stdout).unwrap().to_string()
-        }
-
-        pub fn get_stderr(&self) -> String {
-            str::from_utf8(&self.stderr).unwrap().to_string()
-        }
-    }
-
-    fn prepare_main<'a>(spy: &'a mut Spy) -> Main<&'a [u8], &'a mut Vec<u8>, &'a mut Vec<u8>> {
-        Main {
-            stdin: spy.stdin,
-            stdout: &mut spy.stdout,
-            stderr: &mut spy.stderr,
-        }
+    fn prepare_main(spy: &mut Spy) -> Main {
+        Main { stdio: spy }
     }
 
     #[test]
     fn try_main_run() -> Result<(), Error> {
         let args = CliArgs::parse_from(["run"]);
 
-        let mut spy = Spy::default();
+        let mut spy = Spy::new("");
         let m = prepare_main(&mut spy);
 
         m.try_main(&args)?;
@@ -221,10 +186,23 @@ mod tests {
     }
 
     #[test]
-    fn try_main_unknown_file() -> Result<(), Error> {
+    fn try_main_debug() -> Result<(), Error> {
+        let args = CliArgs::parse_from(["r6502.exe", "debug"]);
+        let mut spy = Spy::new("quit\n");
+        let m = prepare_main(&mut spy);
+        m.try_main(&args)?;
+        let stdout = spy.get_stdout();
+        println!("{}", stdout);
+        assert!(stdout.contains("Start execution at address FFFE"));
+        assert_eq!(spy.get_stderr().len(), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn try_main_unknown_file_error() -> Result<(), Error> {
         let args = CliArgs::parse_from(["run", "-b=unknown.prg"]);
 
-        let mut spy = Spy::default();
+        let mut spy = Spy::new("");
         let m = prepare_main(&mut spy);
 
         let r = m.try_main(&args);
@@ -242,10 +220,28 @@ mod tests {
     }
 
     #[test]
+    fn try_main_unknown_load_address_error() -> Result<(), Error> {
+        let args = CliArgs::parse_from(["run", "-b=tests/assets/simplest.bin"]);
+
+        let mut spy = Spy::new("");
+        let mut m = prepare_main(&mut spy);
+
+        let r = m.run(&args);
+        assert!(r.is_err());
+        let stderr = r.err().unwrap().to_string();
+        // println!("ERR: {}", stderr);
+        assert!(
+            stderr.contains("Load address not specified, and cannot be inferred from file format")
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn main_running_simplest_prg() -> Result<(), Error> {
         let args = CliArgs::parse_from(["run", "-b=tests/assets/simplest.prg"]);
 
-        let mut spy = Spy::default();
+        let mut spy = Spy::new("");
         let mut m = prepare_main(&mut spy);
 
         let snapshot = m.run(&args)?;
@@ -254,7 +250,9 @@ mod tests {
         assert_eq!(snapshot.accumulated_cycles, 12);
         assert_eq!(snapshot.accumulator, 0x42);
 
-        assert!(spy.get_stdout().contains("Start execution at address 0600"));
+        let stdout = spy.get_stdout();
+        println!("{}", stdout);
+        assert!(stdout.contains("Start execution at address 0600"));
         assert_eq!(spy.get_stderr().len(), 0);
         Ok(())
     }
@@ -275,7 +273,7 @@ mod tests {
             approximate_clock_speed: 123456.0,
         };
 
-        let mut spy: Spy = Spy::default();
+        let mut spy = Spy::new("");
         let mut m = prepare_main(&mut spy);
         m.print_snapshot(snapshot);
 

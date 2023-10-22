@@ -1,30 +1,21 @@
 use std::cmp;
 use std::io;
 
+use crate::console_io::StdIo;
 use crate::dbg_cmd_parser::{parse_cmd, AddressRange, DebugCmdError, DebugCommand};
 use mos6502_emulator::{Cpu, CpuError, CpuRegisterSnapshot};
 
-pub struct Debugger<R, W, E> {
-    stdin: R,
-    stdout: W,
-    #[allow(dead_code)]
-    stderr: E,
+pub struct Debugger<'a> {
+    stdio: &'a mut dyn StdIo,
     last_cmd: DebugCommand,
     last_prog_addr: Option<u16>,
     last_mem_addr: Option<u16>,
 }
 
-impl<R, W, E> Debugger<R, W, E>
-where
-    R: io::BufRead,
-    W: io::Write,
-    E: io::Write,
-{
-    pub fn new() -> Debugger<Box<dyn io::BufRead>, Box<dyn io::Write>, Box<dyn io::Write>> {
+impl Debugger<'_> {
+    pub fn new(stdio: &mut dyn StdIo) -> Debugger {
         Debugger {
-            stdin: Box::new(io::BufReader::new(io::stdin())),
-            stdout: Box::new(io::stdout()),
-            stderr: Box::new(io::stderr()),
+            stdio,
             last_cmd: DebugCommand::Invalid,
             last_prog_addr: None,
             last_mem_addr: None,
@@ -69,7 +60,7 @@ where
                     let (start, end, _) = calculate_range(self.last_mem_addr, addr_range, cpu);
                     let mut next_addr = start;
                     while let Ok((line, next)) =
-                        self.write_memory_ln(cpu, next_addr, cmp::min(end - next_addr, 16))
+                        self.format_memory_ln(cpu, next_addr, cmp::min(end - next_addr, 16))
                     {
                         self.writeln(line.as_str());
                         next_addr = next;
@@ -92,7 +83,7 @@ where
         Ok(cpu.get_register_snapshot())
     }
 
-    fn write_memory_ln(
+    fn format_memory_ln(
         &self,
         cpu: &mut Box<dyn Cpu>,
         addr: u16,
@@ -113,16 +104,13 @@ where
     }
 
     fn write(&mut self, msg: &str) {
-        self.stdout.write_all(msg.as_bytes()).unwrap();
-        self.stdout.flush().expect("Failed to flush stdout");
+        let _ = self.stdio.write(msg);
     }
 
     fn get_user_input(&mut self) -> Result<DebugCommand, DebugCmdError> {
         self.write("(dbg)> ");
         let mut input = String::new();
-        self.stdin
-            .read_line(&mut input)
-            .expect("Failed to read user input");
+        let _ = self.stdio.read_line(&mut input);
         let mut cmd = match parse_cmd(input.trim()) {
             Ok(cmd) => cmd,
             Err(e) => match e {
@@ -157,7 +145,7 @@ where
         cpu: &mut Box<dyn Cpu>,
         snapshot: CpuRegisterSnapshot,
     ) -> Result<(), DebugCmdError> {
-        print_register(&mut self.stdout, snapshot);
+        print_register(&mut self.stdio.get_writer(), snapshot);
         let (current_op, _) = cpu.disassemble(cpu.get_pc(), 1)?;
         self.writeln(format!("    {}", current_op[0]).as_str());
         Ok(())
@@ -221,47 +209,23 @@ fn calculate_range(
 
 #[cfg(test)]
 mod tests {
-    // use anyhow::Ok;
-    use std::str;
+    use crate::console_io::tests::Spy;
 
     use super::*;
 
-    struct Spy<'a> {
-        stdin: &'a [u8],
-        stdout: Vec<u8>,
-        stderr: Vec<u8>,
-    }
-
-    impl<'a> Spy<'a> {
-        pub fn new(input: &'a str) -> Spy<'a> {
-            Spy {
-                stdin: input.as_bytes(),
-                stdout: vec![],
-                stderr: vec![],
-            }
-        }
-
-        pub fn get_stdout(&'a self) -> String {
-            str::from_utf8(&self.stdout).unwrap().to_string()
-        }
-
-        #[allow(dead_code)]
-        pub fn get_stderr(&self) -> String {
-            str::from_utf8(&self.stderr).unwrap().to_string()
+    fn create_debugger(spy: &mut Spy) -> Debugger {
+        Debugger {
+            stdio: spy,
+            last_cmd: DebugCommand::Invalid,
+            last_prog_addr: None,
+            last_mem_addr: None,
         }
     }
 
     #[test]
     fn debug_loop_disassemble() -> Result<(), DebugCmdError> {
         let mut spy = Spy::new("disassemble\n\nstep\n\nquit\n");
-        let mut debugger = Debugger {
-            stdin: Box::new(spy.stdin),
-            stdout: &mut spy.stdout,
-            stderr: &mut spy.stderr,
-            last_cmd: DebugCommand::Invalid,
-            last_prog_addr: None,
-            last_mem_addr: None,
-        };
+        let mut debugger = create_debugger(&mut spy);
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
         cpu.load_program(0x0300, &[0xA9, 0x42, 0x85, 0x0F, 0x00], true)?;
         cpu.set_pc(0x0300)?;
@@ -280,14 +244,7 @@ mod tests {
     #[test]
     fn debug_loop_disassemble_by_lines() -> Result<(), DebugCmdError> {
         let mut spy = Spy::new("di $0300,4\n\nquit\n");
-        let mut debugger = Debugger {
-            stdin: Box::new(spy.stdin),
-            stdout: &mut spy.stdout,
-            stderr: &mut spy.stderr,
-            last_cmd: DebugCommand::Invalid,
-            last_prog_addr: None,
-            last_mem_addr: None,
-        };
+        let mut debugger = create_debugger(&mut spy);
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
         cpu.load_program(0x0300, &[0xA9, 0x42, 0x85, 0x0F, 0x00], true)?;
         cpu.set_pc(0x0300)?;
@@ -303,14 +260,7 @@ mod tests {
     #[test]
     fn debug_loop_memory() -> Result<(), DebugCmdError> {
         let mut spy = Spy::new("memory 0x020..0x42\n\nquit\n");
-        let mut debugger = Debugger {
-            stdin: Box::new(spy.stdin),
-            stdout: &mut spy.stdout,
-            stderr: &mut spy.stderr,
-            last_cmd: DebugCommand::Invalid,
-            last_prog_addr: None,
-            last_mem_addr: None,
-        };
+        let mut debugger = create_debugger(&mut spy);
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
         cpu.set_pc(0x0300)?;
         debugger.debug_loop(&mut cpu)?;
@@ -327,20 +277,13 @@ mod tests {
     #[test]
     fn debug_loop_memory_illegal_address() -> Result<(), DebugCmdError> {
         let mut spy = Spy::new("memory 0xA2042\nquit\n");
-        let mut debugger = Debugger {
-            stdin: Box::new(spy.stdin),
-            stdout: &mut spy.stdout,
-            stderr: &mut spy.stderr,
-            last_cmd: DebugCommand::Invalid,
-            last_prog_addr: None,
-            last_mem_addr: None,
-        };
+        let mut debugger = create_debugger(&mut spy);
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
         cpu.set_pc(0x0300)?;
         debugger.debug_loop(&mut cpu)?;
 
         let stdout = spy.get_stdout();
-        println!("{}", stdout);
+        // println!("{}", stdout);
         assert!(stdout.contains("Invalid address: must be between 0 and 65535"));
         assert!(stdout.contains("Usage:"));
         Ok(())
@@ -349,14 +292,7 @@ mod tests {
     #[test]
     fn usage() -> Result<(), DebugCmdError> {
         let mut spy = Spy::new("help\nquit\n");
-        let mut debugger = Debugger {
-            stdin: Box::new(spy.stdin),
-            stdout: &mut spy.stdout,
-            stderr: &mut spy.stderr,
-            last_cmd: DebugCommand::Invalid,
-            last_prog_addr: None,
-            last_mem_addr: None,
-        };
+        let mut debugger = create_debugger(&mut spy);
         let mut cpu = mos6502_emulator::create_cpu(mos6502_emulator::CpuType::MOS6502)?;
         cpu.load_program(0x0300, &[0x00], true)?;
         cpu.set_pc(0x0300)?;
