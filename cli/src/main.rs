@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn try_main_unknown_file() -> Result<(), Error> {
+    fn try_main_unknown_file_error() -> Result<(), Error> {
         let args = CliArgs::parse_from(["run", "-b=unknown.prg"]);
 
         let mut spy = Spy::new("");
@@ -220,6 +220,24 @@ mod tests {
     }
 
     #[test]
+    fn try_main_unknown_load_address_error() -> Result<(), Error> {
+        let args = CliArgs::parse_from(["run", "-b=tests/assets/simplest.bin"]);
+
+        let mut spy = Spy::new("");
+        let mut m = prepare_main(&mut spy);
+
+        let r = m.run(&args);
+        assert!(r.is_err());
+        let stderr = r.err().unwrap().to_string();
+        // println!("ERR: {}", stderr);
+        assert!(
+            stderr.contains("Load address not specified, and cannot be inferred from file format")
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn main_running_simplest_prg() -> Result<(), Error> {
         let args = CliArgs::parse_from(["run", "-b=tests/assets/simplest.prg"]);
 
@@ -232,7 +250,9 @@ mod tests {
         assert_eq!(snapshot.accumulated_cycles, 12);
         assert_eq!(snapshot.accumulator, 0x42);
 
-        assert!(spy.get_stdout().contains("Start execution at address 0600"));
+        let stdout = spy.get_stdout();
+        println!("{}", stdout);
+        assert!(stdout.contains("Start execution at address 0600"));
         assert_eq!(spy.get_stderr().len(), 0);
         Ok(())
     }
