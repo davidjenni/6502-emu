@@ -60,6 +60,7 @@ fn read_program(
     }
 }
 
+#[allow(dead_code)]
 pub trait BinFile {
     fn read(&mut self, format: FileFormat) -> Result<BinFileBuffer, std::io::Error>;
 }

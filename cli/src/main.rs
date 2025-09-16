@@ -165,7 +165,7 @@ mod tests {
     use super::*;
     use crate::console_io::tests::Spy;
 
-    fn prepare_main(spy: &mut Spy) -> Main {
+    fn prepare_main(spy: &'_ mut Spy) -> Main<'_> {
         Main { stdio: spy }
     }
 
