@@ -5,7 +5,7 @@ use std::fmt;
 pub struct StatusRegister {
     pub negative: bool,          // N, bit 7
     pub overflow: bool,          // V, bit 6
-    unused_: bool,               // n/a, bit 5 is an unused expansion bit
+    unused_bit: bool,            // n/a, bit 5 is an unused expansion bit
     pub break_command: bool,     // B, bit 4
     pub decimal_mode: bool,      // D, bit 3
     pub interrupt_disable: bool, // I, bit 2
