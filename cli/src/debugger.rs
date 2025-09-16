@@ -13,7 +13,7 @@ pub struct Debugger<'a> {
 }
 
 impl Debugger<'_> {
-    pub fn new(stdio: &mut dyn StdIo) -> Debugger {
+    pub fn new(stdio: &'_ mut dyn StdIo) -> Debugger<'_> {
         Debugger {
             stdio,
             last_cmd: DebugCommand::Invalid,
@@ -213,7 +213,7 @@ mod tests {
 
     use super::*;
 
-    fn create_debugger(spy: &mut Spy) -> Debugger {
+    fn create_debugger(spy: &'_ mut Spy) -> Debugger<'_> {
         Debugger {
             stdio: spy,
             last_cmd: DebugCommand::Invalid,

@@ -2,6 +2,8 @@ use std::ops;
 
 use crate::CpuError;
 
+// write_zero_page_word & clear_readonly_ranges are not used yet
+#[allow(dead_code)]
 pub trait Memory {
     fn read(&self, address: u16) -> Result<u8, CpuError>;
     fn read_word(&self, address: u16) -> Result<u16, CpuError>;

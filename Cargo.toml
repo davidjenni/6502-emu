@@ -1,5 +1,5 @@
 [workspace]
 members = ["cli", "emulator"]
-resolver = "2"
+resolver = "3"
 
-package.edition = "2021"
+package.edition = "2024"

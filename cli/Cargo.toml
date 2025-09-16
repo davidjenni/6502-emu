@@ -3,7 +3,6 @@ name = "r6502"
 description = "A 6502 emulator written in Rust"
 authors = ["David Jenni"]
 version = "0.1.0"
-edition = "2021"
 readme = "README.md"
 repository = "https://github.com/davidjenni/6502-emu"
 homepage = "https://github.com/davidjenni/6502-emu"
@@ -11,6 +10,7 @@ license = "MIT"
 # license-file = "LICENSE"
 categories = ["emulator", "hardware-support"]
 keywords = ["6502", "emulator", "vintage-computers", "rust"]
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
