@@ -1,8 +1,8 @@
 use std::fmt;
 
 use crate::{
-    engine::decoder::{self, DecodedInstruction},
     CpuError,
+    engine::decoder::{self, DecodedInstruction},
 };
 
 #[derive(Debug, Clone, PartialEq)]

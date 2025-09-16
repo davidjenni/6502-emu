@@ -1,6 +1,6 @@
 // See algo and assembly code in euclid_gcd.md
 
-use mos6502_emulator::{create_cpu, CpuError, CpuType};
+use mos6502_emulator::{CpuError, CpuType, create_cpu};
 
 #[test]
 fn run_gcd_euclid() -> Result<(), CpuError> {

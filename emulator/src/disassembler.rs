@@ -1,4 +1,4 @@
-use crate::{cpu_impl::AddressingMode, engine::decoder, CpuError, CpuImpl};
+use crate::{CpuError, CpuImpl, cpu_impl::AddressingMode, engine::decoder};
 
 pub fn disassemble(cpu: &CpuImpl, address: u16) -> Result<(String, u16), CpuError> {
     let decoded_instr = decoder::decode(cpu.get_byte_at(address)?)?;

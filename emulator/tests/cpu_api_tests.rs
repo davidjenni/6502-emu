@@ -1,4 +1,4 @@
-use mos6502_emulator::{create_cpu, CpuError, CpuType};
+use mos6502_emulator::{CpuError, CpuType, create_cpu};
 
 #[test]
 fn create_default_cpu() -> Result<(), CpuError> {
@@ -10,8 +10,8 @@ fn create_default_cpu() -> Result<(), CpuError> {
 #[test]
 fn run_simple_program() -> Result<(), CpuError> {
     let mut cpu = create_cpu(CpuType::MOS6502).unwrap();
-    assert!(cpu
-        .load_program(
+    assert!(
+        cpu.load_program(
             0x0600,
             &[
                 0xA9, 0x42, // LDA #$42
@@ -20,7 +20,8 @@ fn run_simple_program() -> Result<(), CpuError> {
             ],
             true
         )
-        .is_ok());
+        .is_ok()
+    );
     let snapshot = cpu.run(Some(0x0600))?;
     assert_eq!(snapshot.accumulator, 0x42);
     // assert_eq!(snapshot.program_counter, 0x0605);
