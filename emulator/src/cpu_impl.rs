@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 
+use crate::CpuError;
 use crate::address_bus::AddressBusImpl;
 use crate::address_bus::{AddressBus, SystemVector};
 use crate::cpu_traps::{TrapDoor, TrapOutcomeStatus};
@@ -10,7 +11,6 @@ use crate::memory::MemoryImpl;
 use crate::stack_pointer::StackPointer;
 use crate::stack_pointer::StackPointerImpl;
 use crate::status_register::StatusRegister;
-use crate::CpuError;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AddressingMode {

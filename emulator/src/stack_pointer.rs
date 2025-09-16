@@ -1,5 +1,5 @@
-use crate::memory::Memory;
 use crate::CpuError;
+use crate::memory::Memory;
 
 pub trait StackPointer {
     fn get_sp(&self) -> Result<u16, CpuError>;

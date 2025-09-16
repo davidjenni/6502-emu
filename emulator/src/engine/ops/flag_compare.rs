@@ -1,6 +1,6 @@
+use crate::CpuError;
 use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::engine::ops::alu::subtract_with_carry;
-use crate::CpuError;
 
 // Set/clear status flag operations:
 

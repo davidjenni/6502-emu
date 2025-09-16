@@ -1,6 +1,6 @@
+use crate::CpuError;
 use crate::address_bus::SystemVector;
 use crate::cpu_impl::{AddressingMode, CpuImpl};
-use crate::CpuError;
 
 // BRK:    Force break
 // status: NV ...ZC

@@ -13,9 +13,9 @@ use console_io::StdIo;
 use dbg_cmd_parser::DebugCmdError;
 
 use crate::console_io::ConsoleIo;
-use crate::debugger::{print_register, Debugger};
+use crate::debugger::{Debugger, print_register};
 use args::CliArgs;
-use mos6502_emulator::{create_cpu, Cpu, CpuRegisterSnapshot, CpuType};
+use mos6502_emulator::{Cpu, CpuRegisterSnapshot, CpuType, create_cpu};
 
 fn main() {
     let args = CliArgs::parse();

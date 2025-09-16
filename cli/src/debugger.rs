@@ -2,7 +2,7 @@ use std::cmp;
 use std::io;
 
 use crate::console_io::StdIo;
-use crate::dbg_cmd_parser::{parse_cmd, AddressRange, DebugCmdError, DebugCommand};
+use crate::dbg_cmd_parser::{AddressRange, DebugCmdError, DebugCommand, parse_cmd};
 use mos6502_emulator::{Cpu, CpuError, CpuRegisterSnapshot};
 
 pub struct Debugger<'a> {
@@ -301,8 +301,11 @@ mod tests {
         let stdout = spy.get_stdout();
         // println!("{}", stdout);
         assert!(stdout.contains("Usage:"));
-        assert!(stdout
-            .contains("disassemble (di) [addr_range] - disassemble instructions at address range"));
+        assert!(
+            stdout.contains(
+                "disassemble (di) [addr_range] - disassemble instructions at address range"
+            )
+        );
         Ok(())
     }
 

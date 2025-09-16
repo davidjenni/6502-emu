@@ -1,3 +1,4 @@
+use crate::CpuError;
 use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::engine::opcodes::OpCode;
 use crate::engine::ops::alu::*;
@@ -7,7 +8,6 @@ use crate::engine::ops::flag_compare::*;
 use crate::engine::ops::interrupt::*;
 use crate::engine::ops::stack::*;
 use crate::engine::ops::transfer::*;
-use crate::CpuError;
 
 type OpCodeExecute = fn(AddressingMode, &mut CpuImpl) -> Result<(), CpuError>;
 

@@ -1,5 +1,5 @@
-use crate::cpu_impl::{AddressingMode, CpuImpl};
 use crate::CpuError;
+use crate::cpu_impl::{AddressingMode, CpuImpl};
 
 // Branch operations:
 

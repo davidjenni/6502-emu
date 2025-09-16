@@ -1,7 +1,7 @@
 use std::num::ParseIntError;
 
-use pest::iterators::Pair;
 use pest::Parser;
+use pest::iterators::Pair;
 use pest_derive::Parser;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -289,9 +289,10 @@ mod tests {
             _ => unreachable!("Unexpected error type"),
         };
         assert!(err.to_string().contains("Invalid command:"));
-        assert!(err
-            .to_string()
-            .contains("expected EOI, exclusive, or inclusive"));
+        assert!(
+            err.to_string()
+                .contains("expected EOI, exclusive, or inclusive")
+        );
 
         Ok(())
     }
@@ -307,9 +308,10 @@ mod tests {
         };
         println!("err: {}", err);
         assert!(err.to_string().contains("Invalid command:"));
-        assert!(err
-            .to_string()
-            .contains("expected EOI, exclusive, or inclusive"));
+        assert!(
+            err.to_string()
+                .contains("expected EOI, exclusive, or inclusive")
+        );
 
         Ok(())
     }

@@ -93,9 +93,10 @@ mod tests {
         assert!(result.is_err());
         let err = result.err().unwrap();
         assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
-        assert!(err
-            .to_string()
-            .contains("cannot be inferred from file extension 'bla'"));
+        assert!(
+            err.to_string()
+                .contains("cannot be inferred from file extension 'bla'")
+        );
         Ok(())
     }
 }

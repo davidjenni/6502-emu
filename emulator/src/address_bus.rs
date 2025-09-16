@@ -1,5 +1,5 @@
-use crate::memory::Memory;
 use crate::CpuError;
+use crate::memory::Memory;
 
 #[allow(dead_code)]
 #[allow(clippy::upper_case_acronyms)]
