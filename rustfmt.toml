@@ -1,4 +1,5 @@
 edition = "2024"
 max_width = 100
 hard_tabs = false
-ignore = [ "target/**/opcodes_mos6502.rs" ]
+# still only available in rustfmt-nightly:
+# ignore = [ "target/**/opcodes_mos6502.rs" ]
