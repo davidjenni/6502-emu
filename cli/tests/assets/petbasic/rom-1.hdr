@@ -1,0 +1,426 @@
+
+&STATUS=020c
+&FNLEN=ee
+&LFN=ef
+&SA=f0
+&FA=f1
+&SADDR=$e3+1
+&LADDR=f7+1
+&EADDR=e5+1
+
+&STACK=0100+ff-1
+
+&TIMER1=0205+1
+
+&KEYMSK=0209
+&VERFL=020b
+&NKEYS=020d
+
+
+&IRQV=0219+1
+&BRKV=021b+1
+
+&OUTFL=021d
+&OUTBUF=0222
+
+&LFTAB=0242+9
+&FATAB=024c+9
+&SATAB=0256+9
+
+&NFILES=0262
+&CURIDEV=0263
+&CURODEV=0264
+
+KERNAL=f000
+YERROUT=f57b
+GETFPAR=f433
+ENDCMD=f515
+CHKCOMMA=f45c
+KLOAD=f346
+KPRYMSG=e7de
+KPRCHAR=e3ea
+KPRDMODE=f33f
+IECLOAD=f34b
+IECOPEN=f462
+LISTEN=f0ba
+TALK=f0b6
+ATNOUT=f0bc
+RIECOUT=f0f1
+IECOUT=f167
+SECOUT=f12c
+UNLISTEN=f17e
+UNTALK=f17a
+IECIN=f187
+SECTALK=f15b
+SETFPAR=f2b8
+SLOGFN=f2ab
+CLSIEC=f6e6
+PRSRCH=f3ff
+CLEARIO=fcfb
+SETIRQV=fd1b
+
+KGET=f1cc
+KBASIN=f1df
+KBSOUT=f230
+KCLRCH=f27d
+KCLALL=f2a4
+KVERIFY=f4bb
+KSAVE=f69e
+KOPEN=f52a
+KCLOSE=f2c8
+KSYS=f695
+KINCTIME=ff36
+KCHKIN=f78b
+KCKOUT=f7dc
+
+CLRCH=ffcc
+CLALL=ffe7
+BASIN=ffcf
+BSOUT=ffd2
+LOAD=ffd5
+SAVE=ffd8
+GETSTP=ffe1
+GET=ffe4
+VERIFY=ffdb
+CLOSE=ffc3
+OPEN=ffc0
+SYS=ffde
+SETST=fbe5
+OPENPAR=f4d4
+CHKSTP=f32a
+IECABORT=f339
+INCTIME=ffea
+IRQ=e66b
+RESET=fd38
+CHKIN=ffc6
+CKOUT=ffc9
+
+END=c71e
+FOR=c649
+NEXT=cc36
+DATA=c7f0
+INPUTF=cac6
+INPUT=cae0
+DIM=cf71
+READ=cb24
+LET=c89d
+GOTO=c79d
+RUN=c775
+IF=c820
+RESTORE=c70d
+GOSUB=c780
+RETURN=c7ca
+REM=c833
+TSTSTOP=c71c
+ON=c843
+WAIT=d702
+
+DEF=d295
+POKE=d6f9
+PRINTF=c97f
+PRINT=c99f
+CONT=c745
+LIST=c5a8
+CLR=c770
+CMD=c985
+
+GET=ca9f
+NEW=c551
+
+SGN=db0b
+INT=db9e
+ABS=db2a
+USR=0000
+FRE=d264
+POS=d285
+SQR=de24
+RND=df45
+LOG=d8bf
+EXP=dea0
+COS=df9e
+SIN=dfa5
+TAN=dfee
+ATN=e048
+PEEK=d6e6
+LEN=d654
+STR=d349
+VAL=d685
+ASC=d663
+CHR=d5c4
+LEFT=d5d8
+RIGHT=d604
+MID=d60f
+
+&ERRTAB=c190
+&KEYWORDS=c092-1
+&OPTABLE=c074+3
+
+&CPUIRQV=fffe+1
+&CPURESV=fffc+1
+&CPUNMIV=fffa+1
+
+&VIA_DRB=e840
+&VIA_DRA=e841
+&VIA_DDRB=e842
+&VIA_DDRA=e843
+&VIA_T1CL=e844
+&VIA_T1CH=e845
+&VIA_T1LL=e846
+&VIA_T1LH=e847
+&VIA_T2CL=e848
+&VIA_T2CH=e849
+&VIA_SR=e84a
+&VIA_ACR=e84b
+&VIA_PCR=e84c
+&VIA_IFR=e84d
+&VIA_IER=e84e
+&VIA_ANH=e84f
+
+&PIA1_PA=e810
+&PIA1_CRA=e811
+&PIA1_PB=e812
+&PIA1_CRB=e813
+
+&PIA2_PA=e820
+&PIA2_CRA=e821
+&PIA2_PB=e822
+&PIA2_CRB=e823
+
+&BASADDR=c000+1
+
+*c000 RETA  
+c000 Basic command table
+
+*c046 ADDR  
+c046 Function address table
+
+*c074 UNKNOWN
+
+c074 Operator table with priority and address
+
+c092 BASIC keywords
+
+c190 System messages 
+
+cb0e This branch goes to nirvana!
+
+e7de print kernal messages
+
+*e800 DATA
+
+*f000 UNKNOWN
+
+f0bd NRFD hi
++5 store
+f0c7 NDAC hi
+f0cd if byte not saved, skip
+f0d1 set EOI
+f0d4 send last byte with EOI
+f0d9 clear buffer flag
+f0de clear EOI
+
+f0e7 wait DAV hi
+f0ee ATN lo
+
+f0f3 DAV hi
+f0f9 NRFD and NDAC
+f0fd device not present
+f104 send data to bus
+f10a wait NRFD hi
+f10e DAV lo
+f113 set timer for 65ms
+f11c timer end -> error
+f11f wait NDAC hi
+f123 DAV hi
+f128 clear bus data lines
+
+f12c send secondary address
+f137 ATN hi
+
+f13b time-out error (out)
+f140 always
+
+f142 device not present error
+f144 always
+
+f146 time-out error (in)
+f148 set status
+f150 NRFD lo
+f155 NDAC lo
+
+f15b send secondary talk
+f161 NRFD, NDAC lo
+f164 ATN hi
+
+f16a no byte buffered -> skip
+f16c set buffer flag
+f176 save byte in buffer
+
+f185 always (?) -> ATN hi 
+
+f189 NDAC lo
+f191 NRFD hi
+f196 timer for 65ms
+f19c timer end -> error
+f1a1 wait DAV lo
+f1a8 NRFD lo
+f1ae EOI set?
+f1b0 yes
+f1b2 set status
+f1b5 load bus data
+f1bd NDAC hi
+f1c3 wait DAV hi
+f1c7 NDAC lo
+
+f1cc GET call
+f1ce clear status
+
+
+f1d6 get from keyboard
+f1d9 number of keys in buffer zero ->RTS
+
+f1df BASIN call
+
+f1e2 not keyboard then as GET
+
+f1f1 get from screen?
+f200 dev > 3 (IEEE) -> f227
+f202 get from tape
+
+f227 get from IEEE488
+
+f230 kernel output
+f236 keyboard -> error
+f23b not screen ->
+f23d screen output
+f241 tape ->
+f244 send to IEEE488
+
+f247 Tape
+
+f27d CLRCH, clear I/O 
+
+f2ab set file parameter of log. fn in AC
+
+f2c8 Close 
+f2d7 device number
+f2d9 keyboard ->
+f2dd screen ->
+f2df IEEE488 ->
+f2e1 Tape
+
+
+f307 close IEEE488
+f30a remove from file table
+
+f33f print kmsg in direct mode only
+f34e wait till no key pressed
+f35a default load address to $0400
+f362 check device address
+f366 Syntax error (keyboard, dev. 0)
+f36b Syntax error (screen, dev. 3)
+f36d load from tape (device 1,2)
+f36f look for unused sec. address
+f372 print "searching for ..."
+f37b print "loading/verifying" 
+f37e check stop key
+
+f387 status EOI then end
+f38e make y zero again.
+f38f compare when verifying
+f39a store when loading
+
+LDEND=f3cc
+
+f3a5 load from tape
+
+f3cf verify -> rts
+f3d1 check break status
+f3d9 ok -> 
+f3e0 "Load error"
+f3e5 print "READY."
+
+f3f9 (c9) = (7a)-1
+f3fc clear stack, restore BASIC, return
+f3ff print "searching for ..."
+f401 test direct mode?
+f405 print "searching"
+f40a filename length 0 ->RTS
+f40e print "for"
+f411 print filename
+f422 print loading/verifying 
+f433 Get LOAD parameter
+f43f default to tape (FA=1)
+f448 get filename
+f459 secondary address
+f462 open IEC file
+f47d device not present error
+
+
+f495 Tape stuff
+
+f52a Kernal Open
+f53d file not in use already
+f547 file table full -> lock!
+f54c save file parameter
+f55b check devices
+f563 iecopen
+f566 Tape
+f5ca "found"
+
+f6a9 default save from $0400
+f6b5 keyboard -> device not present
+f6bc screen -> device not present
+f6be tape -> 
+f6c0 get free secaddr
+f6cb LADR -> SADR
+f6ce compare with end address
+
+f6e6 close current IEEE file
+
+f6f6 Tape
+
+f71c look for free sec. address
+f727 -> RTS
+
+f792 clear status
+f79b "file not open"
+f7ab IEEE488 ->
+f7ad Tape
+f7b5 keyboard -> almost finished
+f7b8 restore registers, return
+f7bb CHKIN IEEE488
+f7c3 NRFD, NDAC lo, ATN hi
+f7d5 "device not present"
+
+f7f4 check device
+f7f6 keyboard -> file not open
+f7fa screen -> almost finished
+f7fc IEEE488 ->
+f7fe Tape
+f809 restore registers, return 
+f814 ATN hi
+f826 device not present
+
+f82d Tape
+f840 "press play & record"
+f845 "on tape #"
+
+f913 check break status
+
+f91e returns z=1 if break
+f923 break pressed
+f927 set keyb/screen as I/O
+f92b Does a "BNE -> RTS, otherwise STOP"
+
+fcfb end of load 
+fcfd Cassette #1/2 Motor ?
+fd02 clear all interrupts
+fd07 EOI off (unblank screen on old models!)
+fd0c enable PIA1 CA1 IRQ (screen retrace)
+fd11 set std IRQV
+
+ffed Cassette #1 Motor ?
+fff2 Cassette #2 Motor ?
+*fffc WORD
+
